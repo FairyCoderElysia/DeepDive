@@ -235,7 +235,7 @@
 | Design docs started | **2** |
 | Design docs reviewed | **1**（A1，Verdict: APPROVED） |
 | Design docs approved | 0 |
-| **T1（垂直切片）系统已设计** | 1 / **16**（A1 已评审 APPROVED；A2 骨架已建、在设计） |
+| **T1（垂直切片）系统已设计** | 1 / **16**（A1 已评审 APPROVED；**A2 GDD 已完成、待评审**） |
 | **T2（MVP）系统已设计** | 0 / **7** |
 | **T3（完整愿景）系统已设计** | 0 / **6** |
 
