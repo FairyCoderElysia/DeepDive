@@ -14,8 +14,43 @@ project:
 # modes.rigor fronts six knobs (modes.workflow, docs.density, qa.level,
 # modes.story_granularity, modes.review_mode, team.size). Do NOT write those six
 # here — an explicit value pins it and shadows the rigor expansion. Project-wide
-# exceptions go in the top-level workflow_overrides block below; per-system ones
-# in workflow_overrides.system_overrides.
+# exceptions go in the top-level workflow_overrides block (本项目尚未需要);
+# per-system ones in workflow_overrides.system_overrides.
 modes:
   rigor: standard
   automation: guided
+
+# ---------------------------------------------------------------------------
+# Written by /setup-engine (2026-10-02). These four blocks are what §5.5.1
+# owns; they are dual-written to .claude/docs/technical-preferences.md, which
+# is a legacy mirror. Where both files carry a key, project.yaml wins.
+# ---------------------------------------------------------------------------
+
+engine:
+  name: "Godot"
+  version: "4.7.2"          # = 官方最新 stable，且与本机安装版一致
+  language: "GDScript"
+  rendering: "Forward+"     # §5.5.1 shape 表：2D · 非 web 行
+  physics: "Godot Physics 2D"   # 同上。NOT Jolt —— Jolt 是 Godot 的 3D 默认引擎
+
+specialists:
+  code: "godot-gdscript-specialist"
+  shader: "godot-shader-specialist"
+  ui: "godot-specialist"
+  additional: ["godot-gdextension-specialist"]
+
+naming:
+  classes: PascalCase
+  variables: snake_case
+  constants: SCREAMING_SNAKE
+  signals: past_tense
+  files: snake_case
+  scenes: snake_case
+
+commands:
+  build: "[TO BE CONFIGURED]"   # TODO: 无 export_presets.cfg。preset 名是项目自定义的，
+                                # §5.5.1 明令 ASK——猜一个不存在的名字会让 build
+                                # "运行成功但构建错平台"，或直接 Unknown export preset
+  test: "godot --headless -s -d --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests --ignoreHeadlessMode"
+  run: "godot --path . --windowed --resolution 1280x720"
+  smoke: "godot --headless --quit-after 5"
