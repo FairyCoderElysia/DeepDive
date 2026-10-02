@@ -1,7 +1,8 @@
 # Game Concept: 《深海工艺》(DeepDive: Process)
 
 *Created: 2026-10-02*
-*Status: Draft*
+*Status: Approved*（2026-10-02 —— 见 `design/gdd/reviews/game-concept-review-log.md`；
+**附一条未验证项**：多级 / 大规模布线下的「连」是否仍好玩，已列为 T1 垂直切片的头号目标）
 *Working title — 暂定名，尚未锁定（候选：《元素管路》《深海工厂》）*
 
 > **来源标注（请勿混淆）**

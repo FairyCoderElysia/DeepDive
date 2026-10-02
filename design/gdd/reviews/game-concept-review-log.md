@@ -1,6 +1,6 @@
 # Design Review — `design/gdd/game-concept.md`
 
-**Date:** 2026-10-02 · **Reviewer:** 主会话手工执行 · **Verdict: NEEDS REVISION**（见 F1）
+**Date:** 2026-10-02 · **Reviewer:** 主会话手工执行 · **Verdict: ✅ APPROVED**（2026-10-02 复审更新；原判 NEEDS REVISION 已由原型验证解决 —— 见文末「Verdict」节）
 
 > **本文档的性质说明（必读）**
 > 这份评审**只执行了 `/design-review` 的 Phase 3（一致性与可实现性）**，**Phase 2（完整性）
