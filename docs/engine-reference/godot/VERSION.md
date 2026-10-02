@@ -177,20 +177,59 @@ _mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
 
 ## 追加实测之二（2026-10-02）—— **godot-ai 的 MCP 通道已验证可用**（编辑器侧）
 
-> 本文件此前多处记着「godot-ai 的 MCP 通道从未真正被使用过」。**这一节取代那些记录：已端到端验证通过，而且不需要打开 GUI 窗口。**
+> 本文件此前多处记着「godot-ai 的 MCP 通道从未真正被使用过」。**这一节取代那些记录：通道已端到端验证可用。**
+>
+> ⚠️ **但接下来说的"headless"是错的，必须撤回**：我原写"而且不需要打开 GUI 窗口"，
+> 而实测**那个被验证的编辑器实例是以 GUI 方式启动的**（`tasklist /V` 显示窗口标题
+> `DeepDive-v2 - Godot Engine`，状态 `Not Responding`）。**所以"headless 编辑器也能承载 MCP"并未被证明。**
+> 详见本节的「🛑 自我更正」。
 
-### ✅ 起一个持久 headless 编辑器会话的正确方式
+### ⚠️ 起一个持久编辑器会话的方式（实测是 **GUI**，不是 headless —— 见自我更正）
 ```powershell
 Start-Process -FilePath "godot" -ArgumentList "--headless","--path","<项目绝对路径>","--editor" -PassThru -WindowStyle Hidden
 ```
 **必须用 `Start-Process` 脱离父进程**，不能用 `pwsh` 工具的 `run_in_background`。
+🛑 **但注意上例里的 `--headless` 实测没有生效**（见自我更正第 1 条）—— 照抄会开出一个 GUI 窗口。
 
 ⚠️ **两条实测到的坑（都很容易误判成"通道坏了"）**：
 1. `pwsh` 工具的 `run_in_background` 会**误报 `completed / exit 0`**，而编辑器其实已被收尾杀掉。
    我第一次尝试看起来是"注册成功但会话立刻变陈旧"，就是这个原因 —— **不是 Godot 自己退出**：
    用 `timeout 25` 直接测，它是 `exit=124`（被 timeout 杀掉），**即长驻**。
 2. 之后**在 pwsh 里 `Get-Process` 看不到这个 Godot 进程**（连自己刚启动的 PID 也报"不存在"，沙箱进程视图受限）。
-   → **收尾请用 MCP 的 `editor_manage op=quit`，不要用 `Stop-Process`。**
+   → **改用 `tasklist`**（它能看到；bash 侧的 `tasklist //FI "IMAGENAME eq Godot*"` 有效）。
+   → ⚠️ **不要用 PID 跨视图认进程**：我这一轮看到过三个不同 PID（启动返回 11880 / 会话上报 `editor_pid` 28276 /
+   实际 25888）。**认进程要靠命令行**：`wmic process where "name like '%Godot%'" get ProcessId,CommandLine /format:list`
+
+---
+
+### 🛑 自我更正（本节最重要的一节 —— 三条我说错的事实）
+
+1. **`--headless` 没有生效，我开出了一个 GUI 窗口。**
+   我明确说过"不打算打开 GUI（那会在桌面上弹窗）"，**结果还是开了**。`tasklist` 显示它
+   `Window Title: DeepDive-v2 - Godot Engine`、`Status: Not Responding`。
+   实际进程命令行只剩 `--path E:/Deep_Game/DeepDive-v2 --editor` —— **`--headless` 不见了**。
+   **教训：声明"headless"之后，必须用 `tasklist /V` 核对窗口标题有没有出现，而不是相信参数传过去了。**
+   ⚠️ 这也意味着 **上一节"沙箱实测"里那几条 `godot --headless --editor --quit` 的调用，`--headless` 是否真的生效，我也没有核对过** ——
+   它们都带 `--quit` 且在 5–6 秒内退出，所以即使弹窗也只是一闪。**这一条无法追溯，只能记为"未核对"。**
+2. **`editor_manage op=quit` 不管用。** 它返回 `{"message":"Editor quit initiated","status":"quitting"}`，
+   **但进程继续存在**（仍是 251 MB、`Not Responding`）。真正结束它要靠：
+   ```
+   taskkill //PID <编辑器PID> //T //F
+   ```
+   **（只杀编辑器，不要杀 `godot-ai.exe` —— 那是我自己的 MCP 桥 `attach --port 8001`。）**
+3. **`session_active: false` 与通道可用并不矛盾**（这条我上一轮已更正，此处保留以免复犯）：
+   它指的是**游戏运行时会话**，不是编辑器连接。
+
+### ✅ 那么本节到底"验证"了什么（把范围收窄到站得住的部分）
+**站得住的**：MCP 通道能把真实工具调用送达一个**正在运行的编辑器**，并取回真实数据
+（`filesystem_manage` / `project_manage` / `editor_manage monitors_get` 三个域都通过；`monitors_get`
+返回 30 个实时监视器，含 `node_count=22288`、`draw_calls_in_frame=237`、`video_mem_used=271MB`、`fps=10`）。
+
+**没验证的**：
+- **headless 编辑器能否承载 MCP**（未证明；本次实例是 GUI）
+- **被验证的那个实例是 `Not Responding` 的**：它在回答 MCP 的同一时期被系统标为未响应 ——
+  所以"通道可用"成立，但"**这个会话状态是健康的**"不成立
+- **GUI 是否会被我这套启动方式反复弹出来**：没有再测（不该在用户桌面上反复弹窗来测）
 
 ### ✅ 已验证可用的工具域（每一项都返回了真实数据）
 | 工具域 | 实测调用 | 证据 |
