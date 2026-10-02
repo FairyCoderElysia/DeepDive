@@ -34,7 +34,7 @@
 
 | # | System Name | Category | Priority | Status | Design Doc | Depends On |
 |---|-------------|----------|----------|--------|------------|------------|
-| 1 | A1 元素池与计量系统 | Core | T1 | **In Design** | design/gdd/element-pool.md | — |
+| 1 | A1 元素池与计量系统 | Core | T1 | **In Review** | design/gdd/element-pool.md | — |
 | 2 | A2 化合物与反应数据表 `(inferred)` | Core | T1 | Not Started | — | A1 |
 | 3 | A3 反应求解器（限制试剂·化学计量） | Core | T1 | Not Started | — | A1, A2 |
 | 4 | A4 Schema 双解释器与契约校验 | Core | T1 | Not Started | — | A1, A2 |
@@ -233,9 +233,9 @@
 |--------|-------|
 | Total systems identified | **29** |
 | Design docs started | **1** |
-| Design docs reviewed | 0 |
+| Design docs reviewed | **1**（A1，Verdict: APPROVED） |
 | Design docs approved | 0 |
-| **T1（垂直切片）系统已设计** | 1 / **16**（A1 已写、待评审） |
+| **T1（垂直切片）系统已设计** | 1 / **16**（A1 已写 + 已评审 APPROVED） |
 | **T2（MVP）系统已设计** | 0 / **7** |
 | **T3（完整愿景）系统已设计** | 0 / **6** |
 
