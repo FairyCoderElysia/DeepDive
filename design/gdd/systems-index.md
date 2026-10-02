@@ -164,13 +164,13 @@
 |-------|--------|----------|-------|----------|-------------|
 | 1 | A1 元素池与计量系统 | T1 | Foundation | game-designer | M |
 | 2 | A2 化合物与反应数据表 | T1 | Core | game-designer | M |
-| 3 | A3 反应求解器 | T1 | Core | game-designer | L |
+| 3 | A3 反应求解器（限制试剂·化学计量） | T1 | Core | game-designer | L |
 | 4 | A4 Schema 双解释器与契约校验 | T1 | Core | game-designer + godot-gdscript-specialist | M |
 | 5 | A6 参数与代价面 | T1 | Core | game-designer | M |
 | 6 | A5 工艺图与连续流求解 | T1 | Core | game-designer | L |
-| 7 | B4 氧气经济 | T1 | Core | game-designer | M |
+| 7 | B4 氧气经济（无货币） | T1 | Core | game-designer | M |
 | 8 | B6 储罐与容量 | T1 | Core | game-designer | S |
-| 9 | B2 污染物与失败通道 | T1 | Core | game-designer | M |
+| 9 | B2 污染物与失败通道（Cl / 结垢） | T1 | Core | game-designer | M |
 | 10 | B3 纯度分级与分离提纯 | T1 | Core | game-designer | M |
 | 11 | B5 灾难与失控 | T1 | Core | game-designer | M |
 | 12 | B1 连线编辑与四种连线决策 | T1 | Feature | game-designer | L |
