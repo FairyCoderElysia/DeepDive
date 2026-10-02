@@ -193,9 +193,9 @@
 | 29 | B18 设置与无障碍 | T3 | Polish | godot-specialist | S |
 
 **Effort**：S = 1 个设计会话（产出完整 GDD）· M = 2–3 个会话 · L = 4+ 个会话。
-**Agent 名**：按 `project.yaml` 的 `specialists` 块填的。⚠️ **本安装未核对 `.claude/agents/` 是否存在**
-（与 `.claude/scripts/` 一样可能整块缺失）——`/design-system` 交接前必须先确认这两个名字真的可用，
-否则把 `game-designer` 换成实际存在的 agent。
+**Agent 名**：按 `project.yaml` 的 `specialists` 块填的。✅ **已核对（2026-10-02）**：`.claude/agents/` **存在**（49 个 agent 文件），且本索引实际用到的四个名字
+**全部存在** —— `game-designer` · `godot-gdscript-specialist` · `godot-specialist` · `godot-shader-specialist`。
+（注意与 `.claude/scripts/` 区分：**那个目录确实不存在**，见 `production/ccgs-install-defects.md` 缺陷 #2。）
 
 ---
 
