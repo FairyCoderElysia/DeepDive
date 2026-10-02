@@ -53,4 +53,7 @@ commands:
                                 # "运行成功但构建错平台"，或直接 Unknown export preset
   test: "godot --headless -s -d --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests --ignoreHeadlessMode"
   run: "godot --path . --windowed --resolution 1280x720"
-  smoke: "godot --headless --quit-after 5"
+  smoke: "godot --headless --editor --quit"   # 2026-10-02 实测改的：原来的 "--quit-after 5"
+                                # 会因缺少 run/main_scene 直接报错并 exit=1（不是"挂着不退出"，
+                                # 那条旧记录是错的）。headless 编辑器导入后退出 = exit 0 / 约 6 秒，
+                                # 不需要 main scene，且真的跑了一遍资源导入与脚本类扫描。

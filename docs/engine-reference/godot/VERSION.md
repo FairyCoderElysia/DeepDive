@@ -79,3 +79,52 @@ re-verified this run — do not treat those as freshly confirmed).
   - 4.4→4.5 migration: https://docs.godotengine.org/en/stable/tutorials/migrating/upgrading_to_godot_4.5.html
   - Changelog: https://github.com/godotengine/godot/blob/master/CHANGELOG.md
   - Release notes 4.6: https://godotengine.org/releases/4.6/
+
+---
+
+## 本机实测（2026-10-02）—— 引擎侧不再是"完全未验证"
+
+> 起因：Technical Risks #1 记的是「**Godot 编辑器至今从未启动过，引擎侧一切未验证**」。
+> 这一节把该风险降到"已冒烟"，并把实测数据留档，供以后比对。
+> **环境**：本机 `godot` 经 shim 指向真实的 4.7.2 可执行文件（`--headless --version` 已确认）。
+
+| 检查 | 命令 | 结果 |
+|---|---|---|
+| 二进制与版本 | `godot --headless --version` | `4.7.2.stable.official.ed1daf0bf` · exit=0 |
+| **GDScript 能执行** | `godot --headless --path . -s <script.gd>` | ✅ 打印出 `2+2=4`、`Engine=4.7.2-stable (official)` |
+| **项目能被导入** | `godot --headless --editor --quit` | ✅ **exit=0 / 约 5–6 秒 / 0 条真实错误**，并生成 `.godot/` 导入缓存 |
+| 编辑器插件能加载 | 同上（`[editor_plugins]` 指向 `addons/godot_ai/plugin.cfg`） | ✅ 导入过程走完 `loading_editor_layout → DONE` |
+
+### ✅ 一条可用的 smoke 命令（已写回 `project.yaml`）
+
+```
+godot --headless --editor --quit
+```
+**它不需要 `run/main_scene`**，且真的跑了一遍资源导入与脚本类扫描。
+
+### ⚠️ 更正一条旧记录
+本项目断点里曾写：`--quit-after 5` 会打印 `Can't run project: no main scene defined` **且不退出、必须套 timeout**。
+**实测：它 2 秒内就退出，exit=1。** 旧记录是错的。真实情况是——
+**这条命令因为缺 `run/main_scene` 而完全无效**（永远报错、从不做任何检查），所以必须换掉，而不是"加个 timeout 硬扛"。
+
+### ⚠️ 两条配置事实（本次新查，避免以后猜）
+
+1. **2D 物理引擎原先没有被钉住**：`project.godot` 只有 `3d/physics_engine="Jolt Physics"`，
+   而 `physics/2d/physics_engine` 读到的是 `DEFAULT`。已按 `project.yaml` 的既定决策补上
+   **`2d/physics_engine="GodotPhysics2D"`**（补后引擎读到 `GodotPhysics2D` ✓）。
+   > **合法取值来自引擎本身**（`ProjectSettings.get_property_list()` 的 `hint_string`）：
+   > - 2D：`DEFAULT,GodotPhysics2D,Dummy`
+   > - 3D：`DEFAULT,Jolt Physics,GodotPhysics3D,Dummy`
+   >
+   > **注意 2D 的值没有空格（`GodotPhysics2D`），而 3D 有（`Jolt Physics`）。**
+   > 照 3D 的样子猜成 `"Godot Physics 2D"` 就会写错 —— 所以这类值只能问引擎，不能猜。
+2. **Windows 渲染驱动被设为 `d3d12`**（`rendering_device/driver.windows="d3d12"`）。
+   与 `project.yaml` 的 `Forward+` **不冲突**（Forward+ 可用 Vulkan 或 D3D12），但它是
+   **Windows 专属**、且 D3D12 后端与 Vulkan 在着色器兼容性上历来有差异。
+   **本回合未改动**（合法选择，不是缺陷），仅记一笔：将来若出现"某着色器在别人机器上不对"，先看这里。
+
+### ❌ 仍未被验证的部分（不要把上面这节读成"引擎侧都验过了"）
+- **编辑器 GUI 从未真正打开过**（全是 `--headless`）
+- **godot-ai MCP 从未真正被使用过**（插件能加载 ≠ 工具通道能用）
+- **没有任何场景、脚本、节点、导出预设** —— 上面的"导入成功"只说明**空项目**能被导入
+- **`addons/` 被 gitignore**：`[autoload]` 与 `[editor_plugins]` 都指向它 → **别人 clone 下来会是一个报错的 Godot 项目**（未决）
