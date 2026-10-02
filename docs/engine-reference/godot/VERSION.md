@@ -125,7 +125,7 @@ godot --headless --editor --quit
 
 ### ❌ 仍未被验证的部分（不要把上面这节读成"引擎侧都验过了"）
 - **编辑器 GUI 从未真正打开过**（全是 `--headless`）
-- **godot-ai MCP 从未真正被使用过**（插件能加载 ≠ 工具通道能用）
+- ~~**godot-ai MCP 从未真正被使用过**（插件能加载 ≠ 工具通道能用）~~ → **2026-10-02 已端到端验证可用（编辑器侧），见本文件末尾"追加实测之二"**
 - **没有任何场景、脚本、节点、导出预设** —— 上面的"导入成功"只说明**空项目**能被导入
 - **`addons/` 被 gitignore**：`[autoload]` 与 `[editor_plugins]` 都指向它 → 曾记为"别人 clone 下来是个坏项目"。
   **→ 2026-10-02 已用沙箱实测严重度并修掉，见下一节。**
@@ -170,5 +170,42 @@ _mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
 
 ### 本节仍未能验证的
 - **GUI 编辑器从未真正打开过** → 「缺失插件在**图形界面**下会不会弹报错」仍未测（headless 下是静默的）
-- **godot-ai 的 MCP 通道从未真正使用过**
+- ~~**godot-ai 的 MCP 通道从未真正使用过**~~ → **2026-10-02 已端到端验证可用（编辑器侧），见下一节**
 - **仍无任何导出预设** → `commands.build` 依旧 `[TO BE CONFIGURED]`
+
+---
+
+## 追加实测之二（2026-10-02）—— **godot-ai 的 MCP 通道已验证可用**（编辑器侧）
+
+> 本文件此前多处记着「godot-ai 的 MCP 通道从未真正被使用过」。**这一节取代那些记录：已端到端验证通过，而且不需要打开 GUI 窗口。**
+
+### ✅ 起一个持久 headless 编辑器会话的正确方式
+```powershell
+Start-Process -FilePath "godot" -ArgumentList "--headless","--path","<项目绝对路径>","--editor" -PassThru -WindowStyle Hidden
+```
+**必须用 `Start-Process` 脱离父进程**，不能用 `pwsh` 工具的 `run_in_background`。
+
+⚠️ **两条实测到的坑（都很容易误判成"通道坏了"）**：
+1. `pwsh` 工具的 `run_in_background` 会**误报 `completed / exit 0`**，而编辑器其实已被收尾杀掉。
+   我第一次尝试看起来是"注册成功但会话立刻变陈旧"，就是这个原因 —— **不是 Godot 自己退出**：
+   用 `timeout 25` 直接测，它是 `exit=124`（被 timeout 杀掉），**即长驻**。
+2. 之后**在 pwsh 里 `Get-Process` 看不到这个 Godot 进程**（连自己刚启动的 PID 也报"不存在"，沙箱进程视图受限）。
+   → **收尾请用 MCP 的 `editor_manage op=quit`，不要用 `Stop-Process`。**
+
+### ✅ 已验证可用的工具域（每一项都返回了真实数据）
+| 工具域 | 实测调用 | 证据 |
+|---|---|---|
+| 会话 | `session_manage op=list` | `is_active: true` · plugin **4.2.3** · protocol 2 · `last_seen` 随调用刷新 |
+| 文件系统 | `filesystem_manage read_text res://project.godot` | 返回 **680 字节 / 34 行**，内容与磁盘一致 |
+| 项目设置 | `project_manage settings_get physics/2d/physics_engine` | 返回 **`GodotPhysics2D`** —— 独立确认了上面那个钉法 |
+| 性能监视器 | `editor_manage monitors_get` | 返回 **30 个实时监视器**（`object/node_count=22288` · `render/total_draw_calls_in_frame=237` · `video_mem_used=271MB` · `time/fps=10`） |
+
+### ⚠️ 更正我自己的一处误读（重要，别再犯）
+我一度把 `editor_state` 里的 **`session_active: false`** 读成"编辑器会话陈旧了"，并据此判断通道不可用。**这是误读：**
+- `session_active` / `game_status` / `helper_live` 指的是**游戏运行时会话**（依赖 `[autoload] _mcp_game_helper`），**不是编辑器连接**
+- 实测：`session_active: false` 的同时，`filesystem_manage` 与 `monitors_get` 都正常工作
+- **这恰好独立验证了我移除 autoload 时写下的那句预测：「编辑器侧工具不受影响」** ✅
+
+### 仍然要 autoload 才能用的部分（未变）
+`game_eval` · `game_manage`（运行时节点/UI 检查、输入模拟）· `source="game"` 的截图 —— 它们依赖
+`[autoload] _mcp_game_helper`，当前**不可用**（一行可还原，见上文"处置"）。
