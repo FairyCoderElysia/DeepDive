@@ -1,0 +1,28 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# Godot editor addons — NOT versioned (vendored tool; contains local-machine paths)
+addons/
+
+# CCGS framework (agents, docs, hooks, rules, settings) — deliberately NOT versioned.
+# One exception: technical-preferences.md, because /setup-engine writes
+# project-specific values into it (engine, naming, forbidden patterns, allowed libraries).
+.claude/*
+!.claude/docs/
+.claude/docs/*
+!.claude/docs/technical-preferences.md
+
+# CCGS master config — NOT versioned (its @imports point into .claude/docs/)
+CLAUDE.md
+
+# CCGS — personal local override
+project.local.yaml
+
+# CCGS — ephemeral session state and logs
+production/session-state/
+production/session-logs/
+
+# Python
+__pycache__/
+*.pyc

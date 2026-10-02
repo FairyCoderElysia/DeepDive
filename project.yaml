@@ -1,0 +1,21 @@
+# CCGS project configuration — single source of truth for project settings.
+# Schema: grep the `## <key>` section of .claude/docs/effects-map.md —
+# it is ~31k tokens whole, ~900 per section. Do not open it entire.
+
+schema_version: 1
+
+framework:
+  version: 1.1.2
+  last_upgraded: 2026-10-02
+
+project:
+  stage: Concept
+
+# modes.rigor fronts six knobs (modes.workflow, docs.density, qa.level,
+# modes.story_granularity, modes.review_mode, team.size). Do NOT write those six
+# here — an explicit value pins it and shadows the rigor expansion. Project-wide
+# exceptions go in the top-level workflow_overrides block below; per-system ones
+# in workflow_overrides.system_overrides.
+modes:
+  rigor: standard
+  automation: guided
