@@ -127,4 +127,48 @@ godot --headless --editor --quit
 - **编辑器 GUI 从未真正打开过**（全是 `--headless`）
 - **godot-ai MCP 从未真正被使用过**（插件能加载 ≠ 工具通道能用）
 - **没有任何场景、脚本、节点、导出预设** —— 上面的"导入成功"只说明**空项目**能被导入
-- **`addons/` 被 gitignore**：`[autoload]` 与 `[editor_plugins]` 都指向它 → **别人 clone 下来会是一个报错的 Godot 项目**（未决）
+- **`addons/` 被 gitignore**：`[autoload]` 与 `[editor_plugins]` 都指向它 → 曾记为"别人 clone 下来是个坏项目"。
+  **→ 2026-10-02 已用沙箱实测严重度并修掉，见下一节。**
+
+---
+
+## 追加实测（2026-10-02，沙箱 `$TEMP/dd_sandbox`）—— 场景/脚本/物理，以及 addons 问题的**真实**严重度
+
+> 上一节只证明了"**空**项目能被导入"。这一节另建一个**最小可跑项目**（有 `run/main_scene`、有脚本、有 RigidBody2D）来测两件事。
+> **全部在 `$TEMP` 沙箱里做，不往仓库写任何临时文件。**
+
+### ✅ 场景 + 脚本 + 2D 物理这条链是真的通的
+- `run/main_scene` 能加载 `.tscn`；脚本 `_ready` / `_physics_process` 照常执行
+- 打印出 `Engine=4.7.2-stable (official)`
+- **一个 RigidBody2D + CircleShape2D 在 40 帧后从 `y=-200` 落到 `y=+7.92`** → 重力与 2D 物理求解器**真的在步进**
+  （同时反证上面那条 `2d/physics_engine="GodotPhysics2D"` 的钉法生效）
+
+### ⚠️ 更正我此前一个被夸大的说法
+我此前多次说过「**`addons/` 被 gitignore ⇒ 别人 clone 下来是个坏项目**」。**实测：夸大了。** 精确严重度：
+
+| 缺失的东西 | 沙箱实测行为 |
+|---|---|
+| `[autoload] _mcp_game_helper`（指向 `addons/`） | **3 行 `ERROR`**（File not found → Failed loading resource → Failed to instantiate an autoload），**但游戏照常跑完**，脚本与物理都正常 |
+| `[editor_plugins]`（指向 `addons/`） | **完全静默** —— headless 导入 `exit=0`，一行报错都没有 |
+
+**真相：clone 能跑，但每次启动喷 3 行 ERROR。** 不是"坏项目"。
+
+### ✅ 处置（已改 `project.godot` + 已验证）
+**移除 `[autoload]` 那一段，保留 `[editor_plugins]`**：
+- autoload 是**开发工具**的运行时挂钩（godot-ai 的 `game_eval` 一类），**不是游戏的一部分**；游戏侧没有任何脚本依赖它
+- 它是**唯一**产生 ERROR 的那一项 → 移除后 clone 即干净
+- `[editor_plugins]` **实测对缺 addons 的 clone 零副作用**，而保留它就能让"手上有 addon 的人"直接用上编辑器侧 MCP 能力 —— 属于「对 clone 是空操作、对本地开发是使能器」
+
+**验证**：本仓库 smoke `exit=0 / 0 条真实错误`；**模拟 clone**（只带 `project.godot` + `icon.svg` + `docs/`，**不带 `addons/`**）→ `exit=0 / 0 条真实错误` ✓
+
+**代价（一行可还原）**：本机因此失去 godot-ai 的**游戏运行时**工具（`game_eval` / `game_manage` / `source="game"` 截图）。需要时在 `project.godot` 临时加回：
+```
+[autoload]
+_mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
+```
+**编辑器侧**工具（场景/节点/属性/脚本/材质/瓦片图）不受影响，因为 `[editor_plugins]` 仍在。
+
+### 本节仍未能验证的
+- **GUI 编辑器从未真正打开过** → 「缺失插件在**图形界面**下会不会弹报错」仍未测（headless 下是静默的）
+- **godot-ai 的 MCP 通道从未真正使用过**
+- **仍无任何导出预设** → `commands.build` 依旧 `[TO BE CONFIGURED]`
