@@ -518,7 +518,7 @@
 
 - [ ] **`/prototype 拧参数与严谨度`（T0）** —— **推荐路径**：本项目的核心机制**未经任何验证**，且我们最大的风险恰好是"它好不好玩"。1–2 周的可玩 demo，先证伪再设计。**如果 T0 的答案是否，后面全都白做。**
 - [ ] `/setup-engine` —— 配置引擎与版本，写入 `engine` / `specialists` / `naming` / `commands` 四个块，并填充 `docs/engine-reference/`
-- [ ] `/design-review design/gdd/game-concept.md` —— 本文件未经评审（`Status: Draft`）
+- [x] ~~`/design-review design/gdd/game-concept.md`~~ ✅ **已完成（2026-10-02，Verdict: APPROVED）** —— 见 `design/gdd/reviews/game-concept-review-log.md`（原判 NEEDS REVISION，唯一阻断项 F1 已由 `prototypes/t0b-connection-feel.html` 验证解决）
 - [ ] 若 T0 PROCEEDS：`/art-bible`（Visual Identity Anchor 是它的种子）→ `/map-systems`（分解为系统并定依赖序）
 - [ ] `/design-system [system-name]` —— 按依赖序逐系统写 GDD（把 T0 的实测结论写进 Tuning Knobs 与 Formulas）
 - [ ] `/create-architecture` → `/architecture-decision`（×N）→ `/architecture-review`
