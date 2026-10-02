@@ -34,7 +34,7 @@
 
 | # | System Name | Category | Priority | Status | Design Doc | Depends On |
 |---|-------------|----------|----------|--------|------------|------------|
-| 1 | A1 元素池与计量系统 | Core | T1 | **In Review** | design/gdd/element-pool.md | — |
+| 1 | A1 元素池与计量系统 | Core | T1 | **Approved** | design/gdd/element-pool.md | — |
 | 2 | A2 化合物与反应数据表 `(inferred)` | Core | T1 | Not Started | — | A1 |
 | 3 | A3 反应求解器（限制试剂·化学计量） | Core | T1 | Not Started | — | A1, A2 |
 | 4 | A4 Schema 双解释器与契约校验 | Core | T1 | Not Started | — | A1, A2 |
