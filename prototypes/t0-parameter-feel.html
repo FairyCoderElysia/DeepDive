@@ -4,66 +4,55 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="data:,">
-<title>T0 原型 · 拧参数的手感（临时原型，非生产代码）</title>
+<title>T0 v2 · 拧参数的手感 —— 真实海水 · 四到六个旋钮（临时原型）</title>
 <style>
-  /* ---------------------------------------------------------------
-     临时原型。配色沿用概念文档的 Visual Identity Anchor：
-     低饱和工业色调打底，青色只给氧气，高饱和橙红只给危险与异常。
-     --------------------------------------------------------------- */
-  :root{
-    --bg:#0f1418; --panel:#161d23; --panel2:#1d262e; --line:#2a353f;
-    --ink:#dfe7ec; --dim:#8fa1ad; --dimmer:#66757f;
-    --accent:#2ecfd6;          /* 氧气专用青 —— 唯一固定色 */
-    --danger:#ff5a3c;          /* 高饱和橙红 —— 只给危险与异常 */
-    --warn:#e0a63c;
-    --ok:#5fbf8f;
-  }
+  :root{--bg:#0f1418;--panel:#161d23;--panel2:#1d262e;--line:#2a353f;--ink:#dfe7ec;
+    --dim:#8fa1ad;--dimmer:#66757f;--accent:#2ecfd6;--danger:#ff5a3c;--warn:#e0a63c;--ok:#5fbf8f}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
-    font:15px/1.6 "Segoe UI","Microsoft YaHei",system-ui,-apple-system,sans-serif;
-    padding:32px 20px 96px}
-  .wrap{max-width:1120px;margin:0 auto}
+    font:15px/1.6 "Segoe UI","Microsoft YaHei",system-ui,-apple-system,sans-serif;padding:32px 20px 96px}
+  .wrap{max-width:1180px;margin:0 auto}
   header{border-bottom:1px solid var(--line);padding-bottom:22px;margin-bottom:26px}
   h1{font-size:23px;margin:0 0 12px;font-weight:600;letter-spacing:.3px}
   .q{background:var(--panel);border-left:3px solid var(--accent);padding:14px 18px;
-     border-radius:0 6px 6px 0;margin:0 0 14px;max-width:860px}
+    border-radius:0 6px 6px 0;margin:0 0 14px;max-width:900px}
   .q b{color:var(--accent)}
-  .caveat{color:var(--warn);font-size:13px;margin:0;max-width:860px}
+  .caveat{color:var(--warn);font-size:13px;margin:0;max-width:900px}
   .proto-tag{display:inline-block;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;
-    color:var(--dimmer);border:1px solid var(--line);border-radius:99px;padding:3px 10px;margin-bottom:14px}
-  .proto-tag.throw{color:var(--warn);border-color:#4a3a1c}
+    color:var(--warn);border:1px solid #4a3a1c;border-radius:99px;padding:3px 10px;margin-bottom:14px}
   section{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:20px 22px;margin-bottom:20px}
   h2{font-size:15px;margin:0 0 16px;font-weight:600;color:var(--dim);letter-spacing:.4px}
   h3{font-size:14px;margin:0 0 10px;font-weight:600}
+  h4{font-size:12.5px;margin:18px 0 8px;color:var(--dim);font-weight:600;letter-spacing:.3px}
 
-  .readouts{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:12px;margin-bottom:20px}
+  .readouts{display:grid;grid-template-columns:repeat(auto-fit,minmax(172px,1fr));gap:12px;margin-bottom:18px}
   .ro{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:12px 14px}
-  .ro .k{font-size:12px;color:var(--dim);letter-spacing:.3px}
+  .ro .k{font-size:12px;color:var(--dim)}
   .ro .v{font-size:24px;font-weight:600;margin-top:4px;font-variant-numeric:tabular-nums}
   .ro .s{font-size:11px;color:var(--dimmer);margin-top:2px}
-  .ro.oxygen .v{color:var(--accent)}
-  .ro.risk.hot .v{color:var(--danger)}
-  .ro.risk.hot{border-color:#5a2a20}
   .ro.good .v{color:var(--ok)}
+  .ro.oxygen .v{color:var(--accent)}
+  .ro.hot{border-color:#5a2a20}.ro.hot .v{color:var(--danger)}
+  .ro.foul{border-color:#4a3a1c}.ro.foul .v{color:var(--warn)}
 
-  .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:9px 26px}
-  .f{display:flex;justify-content:space-between;gap:12px;border-bottom:1px dotted var(--line);padding:5px 0}
-  .f .k{color:var(--dim);font-size:13px}
-  .f .v{font-variant-numeric:tabular-nums;text-align:right}
-  .f .v.oxygen{color:var(--accent)}
-  .f .v.bad{color:var(--danger)}
-  .f .v.zero{color:var(--dimmer)}
+  table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+  th{text-align:left;color:var(--dim);font-weight:500;font-size:12px;border-bottom:1px solid var(--line);padding:5px 8px}
+  td{padding:4px 8px;border-bottom:1px dotted var(--line)}
+  td.n{text-align:right}
+  tr.trace td{color:var(--dimmer)}
+  tr.hit td{color:var(--danger)}
+  .pad{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:22px}
 
-  .changed{font-size:12.5px;color:var(--accent);min-height:20px;margin:14px 0 0}
+  .changed{font-size:12.5px;color:var(--accent);min-height:22px;margin:14px 0 0}
   .changed.bad{color:var(--danger)}
+  .changed.warnc{color:var(--warn)}
 
-  .controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(268px,1fr));gap:18px}
+  .controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(272px,1fr));gap:18px}
   .ctl label{display:flex;justify-content:space-between;font-size:13px;color:var(--dim);margin-bottom:7px}
   .ctl label b{color:var(--ink);font-variant-numeric:tabular-nums}
   input[type=range]{width:100%;accent-color:var(--accent)}
-  .rated{font-size:11.5px;color:var(--dimmer);margin-top:5px}
-  .rated.hot{color:var(--danger);font-weight:600}
-  .rated.mid{color:var(--warn)}
+  .hint{font-size:11.5px;color:var(--dimmer);margin-top:5px;line-height:1.5}
+  .hint.hot{color:var(--danger)}.hint.mid{color:var(--warn)}
   .row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
   button{font:inherit;font-size:13.5px;color:var(--ink);background:var(--panel2);
     border:1px solid var(--line);border-radius:6px;padding:7px 14px;cursor:pointer}
@@ -71,13 +60,15 @@
   button.on{border-color:var(--accent);color:var(--accent)}
   button.primary{border-color:var(--accent);color:var(--accent);font-weight:600}
   button.reset{color:var(--dim)}
+  button.small{font-size:12px;padding:5px 10px}
+  .off{opacity:.35;pointer-events:none}
 
   .tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
   .tabs button{font-size:12.5px;padding:6px 12px}
   .tabs button.active{background:var(--accent);border-color:var(--accent);color:#06211f;font-weight:600}
   .scene{border-left:2px solid var(--line);padding-left:18px}
-  .scene .lead{color:var(--dim);font-size:13.5px;max-width:820px;margin:0 0 6px}
-  .scene .watch{font-size:13px;color:var(--warn);max-width:820px;margin:0 0 16px}
+  .scene .lead{color:var(--dim);font-size:13.5px;max-width:840px;margin:0 0 6px}
+  .scene .watch{font-size:13px;color:var(--warn);max-width:840px;margin:0 0 16px}
   .steps{display:flex;flex-direction:column;gap:7px;align-items:flex-start}
   .step{display:flex;align-items:center;gap:10px;width:100%}
   .step .n{font-size:11px;color:var(--dimmer);min-width:18px;font-variant-numeric:tabular-nums}
@@ -85,59 +76,89 @@
   .step.done button{border-color:#2f4a3f;color:var(--dim)}
   .step.done .n::after{content:" ✓";color:var(--ok)}
   footer{color:var(--dimmer);font-size:12px;text-align:center;margin-top:30px;line-height:1.9}
+  code{background:#0b1015;padding:1px 5px;border-radius:3px}
 </style>
 </head>
 <body>
 <div class="wrap">
 
 <header>
-  <div class="proto-tag throw">临时原型 · 用完即弃 · 不是生产代码</div>
-  <h1>拧参数的手感 —— T0 概念原型</h1>
+  <div class="proto-tag">临时原型 · 用完即弃 · 不是生产代码</div>
+  <h1>T0 v2 · 拧参数的手感 —— 真实海水 · 四到六个旋钮</h1>
   <p class="q">
-    <b>这个原型只回答一个问题：把参数拧到不同位置、看到结果随之变化——这件事本身好不好玩？</b><br>
-    它<b>不</b>回答：画面、剧情、飞船、深度分层、物流管网。<br>
-    请重点体验<b>第 5 个场景（瓶颈迁移）</b>——整条设计主张就押在那一件事上：
-    <b>同一个产物、同一条曲线，会因为你当前卡在什么瓶颈上，而给出不同的"正确答案"。</b>
+    <b>v1 已经回答了那个问题（好玩）。v2 要回答的是新问题：旋钮变多，是变得更好玩，还是变糊？</b><br>
+    以及第二个问题：<b>海水不是纯水——Cl / Na / Mg / S / Ca / K 真的会毁掉你的产物吗？</b><br>
+    顶部有<b>模式开关（简化 4 / 标准 5 / 完整 6）</b>。请把三种模式都点一遍再判断哪个好——<b>这个取舍不该靠猜。</b>
   </p>
   <p class="caveat">
-    ⚠️ 诚实声明：下面那条曲线是<b>游戏用的模型，不是真实动力学</b>。它不是化学事实，只用来回答"拧参数好不好玩"。<br>
-    本原型<b>刻意做成完全确定性</b>（没有随机灾难）——因为概念文档把"死得不明不白"列为会劝退玩家的东西。
+    ⚠️ 曲线是<b>游戏模型，不是真实动力学</b>。但海水配方、原子量换算、以及"该用哪类阳极"这三件事是<b>真的</b>。
+    灾难与结垢都是<b>确定性</b>的——没有随机惩罚，因为没有"死得不明不白"。
   </p>
 </header>
 
 <section>
   <h2>当前状态</h2>
   <div class="readouts" id="readouts"></div>
-  <div class="fields" id="fields"></div>
+  <div class="pad">
+    <div>
+      <h4>产物与规格</h4>
+      <table id="tblProd"></table>
+      <h4>元素去向（每批，按原子数）</h4>
+      <table id="tblElem"></table>
+    </div>
+    <div>
+      <h4>海水配方：质量分数 → 原子分数（这步换算不能省）</h4>
+      <table id="tblSea"></table>
+      <h4>工艺与消耗</h4>
+      <table id="tblOps"></table>
+    </div>
+  </div>
   <div class="changed" id="changed"></div>
 </section>
 
 <section>
   <h2>自由玩</h2>
+  <div class="row" style="margin:0 0 18px">
+    <span style="color:var(--dim);font-size:13px;align-self:center;margin-right:6px">模式：</span>
+    <button data-mode="simp">简化 · 4 旋钮</button>
+    <button data-mode="std">标准 · 5（+电极材料）</button>
+    <button data-mode="full">完整 · 6（+电流密度）</button>
+  </div>
   <div class="controls">
     <div class="ctl">
-      <label for="t">温度 T <b><span id="tval">60</span> °C</b></label>
-      <input type="range" id="t" min="20" max="200" step="1" value="60">
-      <div class="rated" id="trated"></div>
+      <label for="t">温度 T <b><span id="tval">80</span> °C</b></label>
+      <input type="range" id="t" min="20" max="200" step="1" value="80">
+      <div class="hint" id="ht"></div>
+    </div>
+    <div class="ctl">
+      <label for="p">压强 P <b><span id="pval">6</span> atm</b></label>
+      <input type="range" id="p" min="1" max="40" step="1" value="6">
+      <div class="hint" id="hp">高压提升转化，但让气体产物更容易溶解并走副反应</div>
+    </div>
+    <div class="ctl">
+      <label for="tau">停留时间 τ <b><span id="tauval">4.0</span></b></label>
+      <input type="range" id="tau" min="0.5" max="15" step="0.5" value="4">
+      <div class="hint" id="htau">反应更充分，但副反应也有更多时间发生</div>
     </div>
     <div class="ctl">
       <label>催化剂</label>
       <div class="row" id="cats"></div>
-      <div class="rated" id="catnote"></div>
+      <div class="hint" id="hcat"></div>
     </div>
-    <div class="ctl">
-      <label for="purity">进水纯度 <b><span id="purityval">100</span>%</b></label>
-      <input type="range" id="purity" min="60" max="100" step="1" value="100">
-      <div class="rated">杂质会压低有效转化，并跟着往下游走</div>
+    <div class="ctl" id="wrapEl">
+      <label>电极材料（阳极）</label>
+      <div class="row" id="els"></div>
+      <div class="hint" id="hel"></div>
     </div>
-    <div class="ctl">
-      <label for="feed">投料量 <b><span id="feedval">100</span> 份水</b></label>
-      <input type="range" id="feed" min="20" max="200" step="10" value="100">
-      <div class="rated">1 份水 = 2 个 H 原子 + 1 个 O 原子</div>
+    <div class="ctl" id="wrapJ">
+      <label for="j">电流密度 j <b><span id="jval">5</span></b></label>
+      <input type="range" id="j" min="1" max="10" step="1" value="5">
+      <div class="hint" id="hj">更快的速率，但过电位更高（更费电）且选择性下降</div>
     </div>
   </div>
   <div class="row">
     <button class="primary" id="run">运行一批</button>
+    <button id="clean">清洗设备（去结垢）</button>
     <button class="reset" id="reset">重置全部</button>
   </div>
 </section>
@@ -149,383 +170,412 @@
 </section>
 
 <footer>
-  落点 <code>prototypes/t0-parameter-feel.html</code><br>
-  纯模块 <code>Chemistry</code> 不依赖 DOM，可整体搬进真正的化学模块
+  落点 <code>prototypes/t0-parameter-feel.html</code> · 纯模块 <code>Chemistry</code> 不依赖 DOM，可整体搬走<br>
+  海水配方来自用户提供的现实占比；<b>占比是质量分数，必须除以原子量才能当原子数用</b>
 </footer>
 </div>
 
 <script>
 /* =====================================================================
-   纯模块：Chemistry —— 不碰 DOM、不持状态、可整体搬走。页面只是它的薄壳。
-
-   ⚠️ 这是【游戏模型】，不是真实动力学。设计意图：
-     · 转化率 随 T 严格递增，但有渐近上限（永远到不了 100%）
-     · 选择性 在"膝点"以下满值，过膝后单调下降；催化剂把膝点左右平移
-     · 于是 产量 = 转化率 × 选择性 出现真正的单峰 —— 两边拧错都有代价
-     · 能耗随 T 上升并折算成氧消耗，而产氧也随 T 上升，
-       于是"每批产量"和"每单位氧产量"是两个峰 → 瓶颈不同，答案不同
-
-   已用穷举验证（T=20..200 × 3 种催化剂）：原子对账 0 次不守恒；
-   两条产量曲线各自单峰；两峰错开 15–28 °C。
+   纯模块 Chemistry —— 不碰 DOM、不持状态、可整体搬走。
+   ⚠️ 游戏模型，不是真实动力学。但下面三件事是真的：
+      · 海水配方与质量分数→原子分数的换算（不换算则"海水造不出水"）
+      · 阳极分"析氯型/析氧型"两类（想要干净 H₂ 就得用析氧阳极，代价是更费电）
+      · 痕量杂质足以让产物不合格
+   每个旋钮都有【代价面】，所以每个旋钮都存在内部最优，而不是"拧到底最好"。
    ===================================================================== */
 const Chemistry = (() => {
 
-  const T_MIN = 20, T_MAX = 200;
+  /* ---- 真实数据：海水质量分数（%）与原子量 ---- */
+  const SEA_MASS = { O:85.84, H:10.82, Cl:1.94, Na:1.08, Mg:0.13, S:0.09, Ca:0.04, K:0.04 };
+  const ATOMIC   = { H:1.008, O:15.999, Cl:35.45, Na:22.99, Mg:24.305, S:32.06, Ca:40.078, K:39.098 };
 
-  /* 选择性满值的区间上界（膝点基准）。催化剂把膝点左右平移：
-     好催化剂 = 你能在更高温下还敢拧，代价是单位能耗更高 */
-  const RATED = { min: 20, max: 60 };
-  const SEL_SLOPE = 0.007;   // 过膝后每 °C 掉多少选择性
-  const RUNAWAY   = 165;     // 失控阈值：以上必然失控（确定性，无随机）
+  /* 质量分数 → 原子分数（必须先除原子量） */
+  const _mol = {}; let _tot = 0;
+  for (const k in SEA_MASS) { _mol[k] = SEA_MASS[k] / ATOMIC[k]; _tot += _mol[k]; }
+  const SEA_ATOM_FRAC = {}; for (const k in _mol) SEA_ATOM_FRAC[k] = _mol[k] / _tot;
+  const ATOMS_PER_SEA_UNIT = 1000;                       // 1 份海水 = 1000 个原子
+  const seaAtoms = e => SEA_ATOM_FRAC[e] * ATOMS_PER_SEA_UNIT;
 
+  /* ---- 可调项 ---- */
+  const T_MIN=20, T_MAX=200, RUNAWAY=165, SPEC_PURITY=0.999;
   const CATALYSTS = {
-    none: { key:'none', label:'不用催化剂', cMax:0.72, k:2.6, kneeShift:  0, energy:1.00 },
-    ni:   { key:'ni',   label:'镍网',       cMax:0.94, k:4.0, kneeShift: -8, energy:1.05 },
-    pt:   { key:'pt',   label:'铂片',       cMax:0.88, k:3.0, kneeShift:+14, energy:1.50 }
+    none:{ key:'none', label:'不用催化剂', cMax:0.72, k:2.6, kneeShift:  0, energy:1.00 },
+    ni:  { key:'ni',   label:'镍网',       cMax:0.94, k:4.0, kneeShift: -8, energy:1.05 },
+    pt:  { key:'pt',   label:'铂片',       cMax:0.88, k:3.0, kneeShift:+14, energy:1.50 }
+  };
+  const ELECTRODES = {
+    graphite:{ key:'graphite', label:'石墨阳极',             cl:1.00, cost:1.00, wear:1.00,
+               note:'析氯强、自己也会被消耗' },
+    dsaCl:   { key:'dsaCl',   label:'钌铱涂层钛（析氯型）',   cl:1.15, cost:0.95, wear:0.30,
+               note:'工业氯碱标准：更促氯、更省电、更耐久 —— 但对我们是错的' },
+    dsaO2:   { key:'dsaO2',   label:'铱钽涂层钛（析氧型）',   cl:0.20, cost:1.45, wear:0.25,
+               note:'抑制氯、保护 H₂ 纯度 —— 代价是过电位更高，更费电' }
   };
 
-  const clamp = (v,a,b) => Math.min(b, Math.max(a, v));
-  const cat  = k => CATALYSTS[k] || CATALYSTS.none;
-  const x01  = T => (T - T_MIN) / (T_MAX - T_MIN);
+  const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+  const x01 = T => (T - T_MIN) / (T_MAX - T_MIN);
+  const kneeOf = c => 60 + (CATALYSTS[c]||CATALYSTS.none).kneeShift;
 
-  function kneeOf(catKey){ return RATED.max + cat(catKey).kneeShift; }
-
-  function conversion(T, catKey) {
-    const c = cat(catKey);
-    return clamp(c.cMax * (1 - Math.exp(-c.k * x01(T))), 0, 1);
+  function conversion(T,P,tau,j,cat,fouling){
+    const c=CATALYSTS[cat]||CATALYSTS.none;
+    const base=c.cMax*(1-Math.exp(-c.k*x01(T)));
+    const fTau=1-Math.exp(-tau/2.5);
+    const fP  =1+0.25*Math.log(P)/Math.log(40);
+    const fJ  =1+0.45*Math.log(j)/Math.log(10);
+    return clamp(base*fTau*fP*fJ*(1-0.55*fouling),0,1);
   }
-  function selectivity(T, catKey) {
-    const over = Math.max(0, T - kneeOf(catKey));
-    return clamp(1 - Math.min(0.94, over * SEL_SLOPE), 0.03, 1);
+  /* 选择性：每个旋钮各有一份代价，乘起来 → 每个旋钮都有内部最优 */
+  function selectivity(T,P,tau,j,cat){
+    const sT   = 1-Math.min(0.94,Math.max(0,T-kneeOf(cat))*0.007);   // 过膝
+    const sTau = 1-Math.min(0.55,Math.max(0,tau-3)*0.05);            // 停留过久 → 副反应
+    const sP   = Math.max(0.15,1-0.40*Math.log(P)/Math.log(40));     // 高压 → 溶解/副反应
+    const sJ   = 1-Math.min(0.25,Math.max(0,j-5)*0.045);             // 高电流密度
+    return clamp(sT*sTau*sP*sJ,0.03,1);
   }
-  function energyPerFeed(T, catKey) {
-    return (0.05 + x01(T) * 0.22) * cat(catKey).energy;
+  function energyPerFeed(T,cat,el,j){
+    const c=CATALYSTS[cat]||CATALYSTS.none, e=ELECTRODES[el]||ELECTRODES.graphite;
+    return (0.05+x01(T)*0.22)*c.energy*e.cost*(1+0.035*(j-5));
   }
-  function runawayRisk(T) {
-    return T < RUNAWAY ? 0 : clamp(0.55 + (T - RUNAWAY) / 40, 0, 1);
+  function runawayRisk(T){ return T<RUNAWAY?0:clamp(0.55+(T-RUNAWAY)/40,0,1); }
+  /* 氯氧化比例 */
+  function chlorineFraction(T,P,tau,j,el){
+    const e=ELECTRODES[el]||ELECTRODES.graphite;
+    const fTau=1-Math.exp(-tau/2.5);
+    return Math.min(1, e.cl*clamp((T-70)/90,0,1.1)*fTau*(0.6+0.4*j/10)
+                      *(1+0.3*Math.log(P)/Math.log(40)));
   }
-
-  const EPS = 1e-6;   // 原子对账用容差：浮点误差不该被误报成"不守恒"
-
-  function evaluate(p) {
-    const T = p.T, catKey = p.catalyst, feed = p.feed, purity = p.purity / 100;
-    const convRate = clamp(conversion(T, catKey) * purity, 0, 1);
-    const sel   = selectivity(T, catKey);
-    const risk  = runawayRisk(T);
-    const eFeed = energyPerFeed(T, catKey);
-
-    const converted = feed * convRate;
-    const onRoute   = converted * sel;      // 正路：2 H2O → 2 H2 + O2
-    const offRoute  = converted - onRoute;  // 岔路：2 H2O → H2O2 + H2
-    const leftover  = feed - converted;     // 未反应，还是水
-
-    /* 原子账（1 单位 = 1 原子；1 份水 = 2H + 1O）
-       正路：1 份水 → H2 得 2H，O2 得 1O
-       岔路：1 份水 → H2O2 得 1H + 1O，H2 得 1H        */
-    const atomsIn = { H: 2 * feed, O: feed };
-    const h2_H  = 2 * onRoute + offRoute;
-    const o2_O  = onRoute;
-    const per_H = offRoute, per_O = offRoute;
-    const wat_H = 2 * leftover, wat_O = leftover;
-    const atomsOut = { H: h2_H + per_H + wat_H, O: o2_O + per_O + wat_O };
-
-    const o2Produced = o2_O;
-    const o2Consumed = eFeed * feed;
-    const o2Net      = o2Produced - o2Consumed;
-
-    /* 两个不同的目标，峰不在同一处 —— 本原型要验的核心 */
-    const h2Yield = feed * convRate * sel;                          // 每批产量
-    const h2PerO2 = o2Consumed > EPS ? h2Yield / o2Consumed : 0;     // 每单位氧的产量
-
-    return {
-      T, catKey, feed, purity: p.purity,
-      convRate, sel, risk, eFeed,
-      converted, onRoute, offRoute, leftover,
-      atomsIn, atomsOut,
-      balanced: Math.abs(atomsIn.H - atomsOut.H) < EPS && Math.abs(atomsIn.O - atomsOut.O) < EPS,
-      knee: kneeOf(catKey),
-      products: {
-        H2:   { H: h2_H },
-        O2:   { O: o2_O },
-        H2O2: { H: per_H, O: per_O },
-        H2O:  { H: wat_H, O: wat_O }
-      },
-      o2Produced, o2Consumed, o2Net,
-      h2Yield, h2PerO2,
-      runaway: risk > 0,
-      disaster: risk >= 1
-    };
+  /* 结垢速率（Ca/Mg/S 析出） */
+  function foulingRate(T,tau,feed){
+    const fTau=1-Math.exp(-tau/2.5);
+    return (seaAtoms('Ca')+seaAtoms('Mg')+seaAtoms('S')*1.5)*feed
+           *clamp((T-60)/100,0,1)*fTau*0.0015;
   }
 
-  /* 把一批结果累加进储罐 —— 仍是纯函数，返回新池子 */
-  function applyBatch(pool, r) {
-    const n = { H2:0, O2:0, H2O2:0, H2O:0, o2NetCumulative:0, batches:0, disasters:0, ...pool };
-    n.H2   += r.products.H2.H / 2;
-    n.O2   += r.products.O2.O / 2;
-    n.H2O2 += r.products.H2O2.H;
-    n.H2O  += r.products.H2O.O;
-    n.o2NetCumulative += r.o2Net;
-    n.batches += 1;
-    if (r.disaster) { n.disasters += 1; n.H2 = 0; n.O2 = 0; n.H2O2 = 0; }
+  const EPS=1e-6;
+  function evaluate(p){
+    const { T, P, cat, tau, el, j, feed, fouling } = p;
+    const conv=conversion(T,P,tau,j,cat,fouling);
+    const sel =selectivity(T,P,tau,j,cat);
+    const eFeed=energyPerFeed(T,cat,el,j);
+    const risk =runawayRisk(T);
+
+    /* 元素库存（原子数） */
+    const A={}; for(const k in SEA_MASS) A[k]=seaAtoms(k)*feed;
+    const waterAvail=A.O;                    // 水分子数 = O 原子数（1 水 = 2H + 1O）
+    const converted=waterAvail*conv;
+    const onRoute=converted*sel, offRoute=converted-onRoute;
+
+    const H2M   = onRoute + offRoute*0.5;    // 正路 1水→1H2；岔路 1水→0.5H2 + 0.5H2O2
+    const O2M   = onRoute*0.5;
+    const H2O2M = offRoute*0.5;
+
+    const clFrac=chlorineFraction(T,P,tau,j,el);
+    const Cl2M  = A.Cl*clFrac/2;
+    const purity= H2M+Cl2M>EPS ? H2M/(H2M+Cl2M) : 1;
+    const okPurity = purity>=SPEC_PURITY;
+
+    const foulRate=foulingRate(T,tau,feed);
+    const foulingAfter=clamp(fouling+foulRate,0,1);
+
+    /* 原子对账 */
+    const prodH=H2M*2+H2O2M*2, prodO=O2M*2+H2O2M*2, prodCl=Cl2M*2;
+    const inProducts={ H:prodH, O:prodO, Cl:prodCl, Na:0, Mg:0, S:0, Ca:0, K:0 };
+    const balance={};
+    for(const k in A) balance[k]={ in:A[k], out:inProducts[k], rest:A[k]-inProducts[k] };
+
+    const cons=eFeed*feed;
+    const o2Net=O2M*2-cons;
+    const qualH2=okPurity?H2M:0;             // 合格产量：纯度不达标 = 0
+    const perO2=okPurity&&cons>EPS?H2M/cons:0;
+
+    return { T,P,cat,tau,el,j,feed,
+      conv,sel,risk,eFeed,clFrac,purity,okPurity,
+      products:{H2:H2M,O2:O2M,H2O2:H2O2M,Cl2:Cl2M},
+      atomsIn:A, inProducts, balance,
+      conserved: Object.values(balance).every(b=>b.rest>=-1e-6),
+      o2Produced:O2M*2, o2Consumed:cons, o2Net,
+      h2Total:H2M, qualH2, perO2,
+      foulRate, foulingAfter, fouling:fouling,
+      electrodeWear: clFrac*(ELECTRODES[el]||ELECTRODES.graphite).wear,
+      runaway:risk>0, disaster:risk>=1 };
+  }
+
+  function applyBatch(pool,r){
+    const n={ H2:0,O2:0,H2O2:0,Cl2:0,qual:0,lost:0,batches:0,disasters:0,o2Net:0,fouling:0,...pool };
+    n.batches+=1;
+    n.fouling=r.foulingAfter;
+    n.o2Net+=r.o2Net;
+    if(r.disaster){ n.lost+=1; n.H2=0;n.O2=0;n.H2O2=0;n.Cl2=0;n.disasters+=1; return n; }
+    n.H2+=r.products.H2; n.O2+=r.products.O2; n.H2O2+=r.products.H2O2; n.Cl2+=r.products.Cl2;
+    if(r.okPurity) n.qual+=r.products.H2;
     return n;
   }
 
-  return { T_MIN, T_MAX, RATED, RUNAWAY, SEL_SLOPE, CATALYSTS,
+  return { SEA_MASS, ATOMIC, SEA_ATOM_FRAC, ATOMS_PER_SEA_UNIT, seaAtoms,
+           T_MIN, T_MAX, RUNAWAY, SPEC_PURITY, CATALYSTS, ELECTRODES,
            kneeOf, conversion, selectivity, energyPerFeed, runawayRisk,
-           evaluate, applyBatch };
+           chlorineFraction, foulingRate, evaluate, applyBatch };
 })();
 
 
 /* =====================================================================
-   薄壳：只负责画状态、把点击转成调用。逻辑一律在 Chemistry 里。
+   薄壳
    ===================================================================== */
-const EMPTY_POOL = { H2:0, O2:0, H2O2:0, H2O:0, o2NetCumulative:0, batches:0, disasters:0 };
-const INITIAL = { T:60, catalyst:'none', feed:100, purity:100, pool:{ ...EMPTY_POOL } };
+const EMPTY_POOL={H2:0,O2:0,H2O2:0,Cl2:0,qual:0,lost:0,batches:0,disasters:0,o2Net:0,fouling:0};
+const INITIAL={ T:80,P:6,tau:4,cat:'pt',el:'dsaO2',j:5,feed:100,mode:'std',pool:{...EMPTY_POOL} };
+let state=JSON.parse(JSON.stringify(INITIAL));
+let activeScene=0, stepDone={};
+let lastNote={text:'初始状态：真实海水、析氧型阳极、P=6 atm。右上的模式开关可以让旋钮从 4 个加到 6 个。',bad:false};
 
-let state = JSON.parse(JSON.stringify(INITIAL));
-let activeScene = 0, stepDone = {};
-let lastNote = { text:'初始状态。把温度滑杆推一推，看那两列产量读数怎么变。', bad:false };
+const $=id=>document.getElementById(id);
+const num=(v,d=1)=>Number(v).toFixed(d);
+const sgn=v=>(v>=0?'+':'−')+num(Math.abs(v),0);
+const hasEl=()=>state.mode!=='simp';
+const hasJ =()=>state.mode==='full';
+const curEl =()=>hasEl()?state.el:'graphite';
+const curJ  =()=>hasJ()?state.j:5;
+/* 单一入口：把 state 补成 Chemistry.evaluate 需要的完整参数对象。
+   ⚠️ fouling 住在 pool 里、不在 state 上——漏传会让 conv 变成 NaN，
+   而且纯度会因为 NaN 比较一路显示成 100.000%，看起来像"没问题"。 */
+const snapshot=()=>({ ...state, el:curEl(), j:curJ(), fouling:state.pool.fouling });
 
-const $ = id => document.getElementById(id);
-const num = (v,d=1) => Number(v).toFixed(d);
-const sgn = v => (v >= 0 ? '+' : '−') + num(Math.abs(v), 0);
-
-function renderReadouts(r) {
-  $('readouts').innerHTML = `
-    <div class="ro good">
-      <div class="k">每批 H₂ 产量</div>
-      <div class="v">${num(r.h2Yield,1)}</div>
-      <div class="s">转化率 × 选择性 → 单峰</div>
-    </div>
-    <div class="ro good">
-      <div class="k">每单位氧的 H₂ 产量</div>
-      <div class="v">${num(r.h2PerO2,2)}</div>
-      <div class="s">另一个峰，通常不在同一处</div>
-    </div>
-    <div class="ro">
-      <div class="k">选择性（纯度）</div>
-      <div class="v">${num(r.sel*100,0)}%</div>
-      <div class="s">膝点 ${r.knee}°C 以上开始掉</div>
-    </div>
-    <div class="ro oxygen">
-      <div class="k">净氧（产出 − 耗能）</div>
-      <div class="v">${sgn(r.o2Net)}</div>
-      <div class="s">氧气既是产品，也是电</div>
-    </div>
-    <div class="ro risk ${r.risk>0?'hot':''}">
-      <div class="k">失控风险</div>
-      <div class="v">${r.risk===0?'无':num(r.risk*100,0)+'%'}</div>
-      <div class="s">${Chemistry.RUNAWAY}°C 以上必然失控</div>
-    </div>`;
+function renderReadouts(r){
+  $('readouts').innerHTML=`
+    <div class="ro good"><div class="k">合格 H₂ 产量</div><div class="v">${num(r.qualH2,0)}</div>
+      <div class="s">纯度不达标就归零</div></div>
+    <div class="ro"><div class="k">H₂ 总产量</div><div class="v">${num(r.h2Total,0)}</div>
+      <div class="s">不论合格与否</div></div>
+    <div class="ro ${r.okPurity?'':'hot'}"><div class="k">H₂ 纯度（规格 ${(Chemistry.SPEC_PURITY*100).toFixed(1)}%）</div>
+      <div class="v">${(r.purity*100).toFixed(3)}%</div><div class="s">Cl₂ 混入所致</div></div>
+    <div class="ro oxygen"><div class="k">净氧（产出 − 耗能）</div><div class="v">${sgn(r.o2Net)}</div>
+      <div class="s">氧气既是产品，也是电</div></div>
+    <div class="ro ${r.fouling>0.3?'foul':''}"><div class="k">结垢度</div><div class="v">${(r.fouling*100).toFixed(1)}%</div>
+      <div class="s">每批 +${(r.foulRate*100).toFixed(2)}%</div></div>`;
 }
 
-function renderFields(r) {
-  const p = state.pool;
-  const row = (k,v,cls='') => `<div class="f"><span class="k">${k}</span><span class="v ${cls}">${v}</span></div>`;
-  const zero = v => (v > 0.05 ? '' : ' zero');
-  $('fields').innerHTML = [
-    row('温度 T', `${r.T} °C`),
-    row('催化剂 / 选择性膝点', `${Chemistry.CATALYSTS[r.catKey].label} / ${r.knee} °C`),
-    row('投料 / 进水纯度', `${r.feed} 份 / ${r.purity}%`),
-    row('转化率', num(r.convRate*100,1) + '%'),
-    row('本批转化 / 走岔路', `${num(r.converted)} / ${num(r.offRoute)} 份`),
-    row('原子账 H（进 → 出）', `${r.atomsIn.H} → ${num(r.atomsOut.H,4)}`, r.balanced ? 'oxygen' : 'bad'),
-    row('原子账 O（进 → 出）', `${r.atomsIn.O} → ${num(r.atomsOut.O,4)}`, r.balanced ? 'oxygen' : 'bad'),
-    row('产物 H₂', num(r.products.H2.H/2,1) + ' 份'),
-    row('产物 O₂', num(r.products.O2.O/2,1) + ' 份', 'oxygen'),
-    row('副产物 H₂O₂（意外产物）', num(r.products.H2O2.H,1) + ' 份', r.products.H2O2.H > 0.05 ? 'bad' : 'zero'),
-    row('未反应的水', num(r.products.H2O.O,1) + ' 份', zero(r.products.H2O.O)),
-    row('能耗（折算耗氧）', num(r.o2Consumed,1) + ' 个氧原子', 'bad'),
-    row('储罐 H₂ / O₂ / H₂O₂', `${num(p.H2)} / ${num(p.O2)} / ${num(p.H2O2)}`, p.H2O2 > 0.05 ? 'bad' : ''),
-    row('累计净氧 / 已运行批数', `${sgn(p.o2NetCumulative)} / ${p.batches}`),
-    row('失控次数', p.disasters, p.disasters ? 'bad' : 'zero')
-  ].join('');
+function renderTables(r){
+  const p=r.products;
+  $('tblProd').innerHTML=`
+    <tr><th>物质</th><th class="n">产量（分子/批）</th><th>去向</th></tr>
+    <tr><td>H₂</td><td class="n">${num(p.H2,1)}</td><td>${r.okPurity?'✅ 合格':'❌ 被 Cl₂ 污染'}</td></tr>
+    <tr><td>O₂</td><td class="n">${num(p.O2,1)}</td><td>主产品</td></tr>
+    <tr ${p.H2O2>0.05?'class="hit"':''}><td>H₂O₂（意外产物）</td><td class="n">${num(p.H2O2,1)}</td><td>条件偏离额定区</td></tr>
+    <tr ${p.Cl2>0.05?'class="hit"':''}><td>Cl₂（杂质）</td><td class="n">${num(p.Cl2,2)}</td><td>痕量即毁规格</td></tr>`;
+
+  const rows=Object.keys(r.atomsIn).sort((a,b)=>r.atomsIn[b]-r.atomsIn[a]);
+  $('tblElem').innerHTML=`<tr><th>元素</th><th class="n">投入</th><th class="n">进产物</th><th class="n">留盐水</th><th>被谁抓走</th></tr>`
+    + rows.map(k=>{
+        const b=r.balance[k];
+        const trace=(k!=='H'&&k!=='O'&&r.atomsIn[k]<5)?' class="trace"':'';
+        const hit=(k==='Cl'&&p.Cl2>0.05)?' class="hit"':'';
+        const who={H:'H₂ / H₂O₂ / 水',O:'O₂ / H₂O₂ / 水',Cl:'Cl₂（阳极氧化）',Na:'留盐水',
+                   Mg:'结垢（Mg(OH)₂）',S:'结垢（CaSO₄）',Ca:'结垢（CaSO₄）',K:'留盐水'}[k];
+        return `<tr class="${trace?'trace':''}${hit?'hit':''}"><td>${k}</td><td class="n">${num(b.in,2)}</td>
+          <td class="n">${num(b.out,2)}</td><td class="n">${num(b.rest,2)}</td><td>${who}</td></tr>`;
+      }).join('');
+
+  const order=Object.keys(Chemistry.SEA_MASS);
+  $('tblSea').innerHTML=`<tr><th>元素</th><th class="n">质量分数</th><th class="n">÷原子量</th><th class="n">原子分数</th><th class="n">原子数/份</th></tr>`
+    + order.map(k=>`<tr class="${Chemistry.SEA_ATOM_FRAC[k]<0.01?'trace':''}"><td>${k}</td>
+        <td class="n">${Chemistry.SEA_MASS[k].toFixed(2)}%</td>
+        <td class="n">${(Chemistry.SEA_MASS[k]/Chemistry.ATOMIC[k]).toFixed(4)}</td>
+        <td class="n">${(Chemistry.SEA_ATOM_FRAC[k]*100).toFixed(3)}%</td>
+        <td class="n">${Chemistry.seaAtoms(k).toFixed(2)}</td></tr>`).join('');
+
+  $('tblOps').innerHTML=`
+    <tr><th>项</th><th class="n">值</th></tr>
+    <tr><td>温度 / 压强 / 停留</td><td class="n">${r.T}°C / ${r.P}atm / ${num(r.tau,1)}</td></tr>
+    <tr><td>催化剂</td><td class="n">${Chemistry.CATALYSTS[r.cat].label}（膝点 ${r.knee||Chemistry.kneeOf(r.cat)}°C）</td></tr>
+    <tr><td>电极材料</td><td class="n">${hasEl()?Chemistry.ELECTRODES[r.el].label:'（简化模式：固定石墨）'}</td></tr>
+    <tr><td>电流密度 j</td><td class="n">${hasJ()?r.j:'（未启用）'}</td></tr>
+    <tr><td>转化率</td><td class="n">${num(r.conv*100,1)}%</td></tr>
+    <tr><td>选择性（走正路）</td><td class="n">${num(r.sel*100,1)}%</td></tr>
+    <tr><td>阳极氯氧化比例</td><td class="n">${num(r.clFrac*100,1)}%</td></tr>
+    <tr><td>能耗（折算耗氧）</td><td class="n">${num(r.o2Consumed,1)} 个氧原子</td></tr>
+    <tr><td>原子对账</td><td class="n">${r.conserved?'守恒 ✅':'不守恒 ❌（bug）'}</td></tr>
+    <tr><td>储罐 H₂ / 合格 H₂</td><td class="n">${num(state.pool.H2,1)} / ${num(state.pool.qual,1)}</td></tr>
+    <tr><td>已运行批数 / 报废批数</td><td class="n">${state.pool.batches} / ${state.pool.lost}</td></tr>`;
 }
 
-function renderChanged(n) {
-  const el = $('changed');
-  el.className = 'changed' + (n.bad ? ' bad' : '');
-  el.textContent = n.text;
+function renderChanged(n){ const el=$('changed'); el.className='changed'+(n.bad?' bad':(n.warn?' warnc':'')); el.textContent=n.text; }
+
+function renderControls(){
+  $('t').value=state.T; $('tval').textContent=state.T;
+  $('p').value=state.P; $('pval').textContent=state.P;
+  $('tau').value=state.tau; $('tauval').textContent=num(state.tau,1);
+  $('j').value=state.j; $('jval').textContent=state.j;
+
+  const knee=Chemistry.kneeOf(state.cat);
+  const ht=$('ht'); let cls='hint',msg;
+  if(state.T>=Chemistry.RUNAWAY){cls+=' hot';msg=`⚠ 越过 ${Chemistry.RUNAWAY}°C 失控阈值——运行必然爆`;}
+  else if(state.T>knee){cls+=' mid';msg=`已过选择性膝点 ${knee}°C`;}
+  else msg=`在选择性满值区间（到 ${knee}°C）`; ht.textContent=msg; ht.className=cls;
+  $('hp').className='hint'; $('htau').className='hint'; $('hj').className='hint';
+
+  $('cats').innerHTML=Object.values(Chemistry.CATALYSTS).map(c=>
+    `<button class="${state.cat===c.key?'on':''}" data-cat="${c.key}">${c.label}</button>`).join('');
+  $('hcat').textContent=`膝点 ${knee}°C · 单位能耗 ×${Chemistry.CATALYSTS[state.cat].energy}`;
+
+  $('wrapEl').className='ctl'+(hasEl()?'':' off');
+  $('els').innerHTML=Object.values(Chemistry.ELECTRODES).map(e=>
+    `<button class="${state.el===e.key?'on':''}" data-el="${e.key}">${e.label}</button>`).join('');
+  $('hel').textContent=hasEl()?Chemistry.ELECTRODES[state.el].note:'简化模式不启用（按石墨阳极算）';
+
+  $('wrapJ').className='ctl'+(hasJ()?'':' off');
+  document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('on',b.dataset.mode===state.mode));
 }
 
-function renderControls() {
-  const knee = Chemistry.kneeOf(state.catalyst);
-  $('t').value = state.T; $('tval').textContent = state.T;
+function renderAll(){ const r=Chemistry.evaluate(snapshot());
+  renderReadouts(r); renderTables(r); renderControls(); renderChanged(lastNote); return r; }
 
-  const tr = $('trated');
-  let cls = 'rated', msg;
-  if (state.T >= Chemistry.RUNAWAY){ cls += ' hot'; msg = `⚠ 越过 ${Chemistry.RUNAWAY}°C 失控阈值 —— 运行必然爆`; }
-  else if (state.T > knee){ cls += ' mid'; msg = `选择性已在下降（膝点 ${knee}°C）—— 产量可能已在回落`; }
-  else if (state.T < Chemistry.RATED.min){ msg = '偏低：很干净，但转化率太低'; }
-  else { msg = `选择性满值区间（到 ${knee}°C 为止）`; }
-  tr.textContent = msg; tr.className = cls;
+/* ---------- 动作 ---------- */
+function evalNow(){ return Chemistry.evaluate(snapshot()); }
+function note(t,bad,warn){ lastNote={text:t,bad:!!bad,warn:!!warn}; renderAll(); }
 
-  $('cats').innerHTML = Object.values(Chemistry.CATALYSTS).map(c =>
-    `<button data-cat="${c.key}" class="${state.catalyst===c.key?'on':''}">${c.label}</button>`).join('');
-  $('catnote').textContent = `膝点 ${knee}°C · 单位能耗 ×${Chemistry.CATALYSTS[state.catalyst].energy}`;
-
-  $('purity').value = state.purity; $('purityval').textContent = state.purity;
-  $('feed').value = state.feed;     $('feedval').textContent = state.feed;
+function setT(v){ state.T=v; const r=Chemistry.evaluate(snapshot());
+  if(v>=Chemistry.RUNAWAY) note(`T = ${v}°C：越过 ${Chemistry.RUNAWAY}°C，运行必然失控 —— 是曲线，不是运气。`,1);
+  else if(v>Chemistry.kneeOf(state.cat)) note(`T = ${v}°C：过了膝点，走岔路的水变多（H₂O₂ ${num(r.products.H2O2,1)} 份），同时阳极开始氧化氯（纯度 ${(r.purity*100).toFixed(3)}%）。`,0,1);
+  else note(`T = ${v}°C：选择性满值。纯度 ${(r.purity*100).toFixed(3)}%${r.okPurity?' ✅':' ❌'}。`);
 }
-
-function renderAll() {
-  const r = Chemistry.evaluate(state);
-  renderReadouts(r); renderFields(r); renderControls(); renderChanged(lastNote);
-  return r;
-}
-
-/* ---------- 自由玩动作 ---------- */
-function setT(v){
-  state.T = v;
-  const r = Chemistry.evaluate(state), knee = r.knee;
-  lastNote = v >= Chemistry.RUNAWAY
-    ? { text:`T = ${v}°C：越过 ${Chemistry.RUNAWAY}°C。运行时必然失控 —— 这不是运气，是曲线。`, bad:true }
-    : v > knee
-    ? { text:`T = ${v}°C：过了膝点 ${knee}°C，选择性 ${num(r.sel*100,0)}%。产量还在涨还是在跌？看那两列。`, bad:true }
-    : v < Chemistry.RATED.min
-    ? { text:`T = ${v}°C：选择性 ${num(r.sel*100,0)}%、很干净，但转化率只有 ${num(r.convRate*100,0)}% —— 瓶颈在产能。`, bad:false }
-    : { text:`T = ${v}°C：在选择性满值区间内（到 ${knee}°C）。`, bad:false };
+function setP(v){ state.P=v; const r=Chemistry.evaluate(snapshot());
+  note(`P = ${v} atm：转化 ${num(r.conv*100,1)}%、选择性 ${num(r.sel*100,1)}%。高压既帮忙也捣乱——看这两列哪个赢。`); }
+function setTau(v){ state.tau=v; const r=Chemistry.evaluate(snapshot());
+  note(`τ = ${num(v,1)}：转化 ${num(r.conv*100,1)}%、选择性 ${num(r.sel*100,1)}%、结垢 +${(r.foulRate*100).toFixed(2)}%/批。停留越久，副反应也越久。`); }
+function setJ(v){ state.j=v; const r=Chemistry.evaluate(snapshot());
+  note(`j = ${v}：转化 ${num(r.conv*100,1)}%、选择性 ${num(r.sel*100,1)}%、耗氧 ${num(r.o2Consumed,0)}。更快 ≠ 更好。`); }
+function setCat(k){ state.cat=k; note(`换上${Chemistry.CATALYSTS[k].label}：膝点移到 ${Chemistry.kneeOf(k)}°C，转化率上限 ${num(Chemistry.CATALYSTS[k].cMax*100,0)}%，单位能耗 ×${Chemistry.CATALYSTS[k].energy}。`); }
+function setEl(k){ state.el=k; const e=Chemistry.ELECTRODES[k];
+  note(`换上${e.label}：${e.note}。它对 Cl 的偏向 ×${e.cl}、单位能耗 ×${e.cost}。`); }
+function setMode(m){ state.mode=m;
+  note(m==='simp'?'切到【简化·4 旋钮】：电极固定石墨、电流密度不启用。'
+      :m==='std' ?'切到【标准·5 旋钮】：多了电极材料。'
+                 :'切到【完整·6 旋钮】：多了电流密度。你觉得哪个更好玩？',0,1);
   renderAll();
 }
-function setCat(k){
-  state.catalyst = k;
-  const c = Chemistry.CATALYSTS[k];
-  lastNote = { text:`换上${c.label}：膝点移到 ${Chemistry.kneeOf(k)}°C，转化率上限 ${num(c.cMax*100,0)}%，单位能耗 ×${c.energy}。它把整条曲线的形状换了。`, bad:false };
-  renderAll();
+function runBatch(){ const r=evalNow(); state.pool=Chemistry.applyBatch(state.pool,r);
+  const bits=[];
+  if(!r.okPurity) bits.push(`H₂ 纯度 ${(r.purity*100).toFixed(3)}% 低于规格 ${(Chemistry.SPEC_PURITY*100).toFixed(1)}% → 这批不计入合格产量`);
+  if(r.products.H2O2>0.05) bits.push(`副产物 H₂O₂ ${num(r.products.H2O2,1)} 份`);
+  if(r.o2Net<0) bits.push(`净氧为负：烧掉 ${num(-r.o2Net,0)} 个氧原子`);
+  if(r.foulingAfter>0.3) bits.push(`结垢 ${(r.foulingAfter*100).toFixed(1)}% → 转化率已被打折`);
+  if(r.disaster) bits.push('失控：爆罐，储罐清空');
+  note((r.disaster?'⚠ ':'')+`运行一批：H₂ ${num(r.products.H2,1)} 份`+
+    (bits.length?'。'+bits.join('；')+'。':'，一切正常。'), r.disaster||!r.okPurity||r.o2Net<0, !r.okPurity&&!r.disaster);
 }
-function setPurity(v){
-  state.purity = v;
-  lastNote = { text: v < 100 ? `进水纯度 ${v}%：杂质压低有效转化，并把杂质带进下游。` : '进水回到纯净。', bad: v < 90 };
-  renderAll();
-}
-function setFeed(v){
-  state.feed = v;
-  lastNote = { text:`投料 ${v} 份水：按比例放大产量与能耗，但不改变最优点在哪。`, bad:false };
-  renderAll();
-}
-function runBatch(){
-  const r = Chemistry.evaluate(state);
-  state.pool = Chemistry.applyBatch(state.pool, r);
-  const bits = [];
-  if (r.products.H2O2.H > 0.05) bits.push(`出现副产物 H₂O₂ ${num(r.products.H2O2.H,1)} 份`);
-  if (r.o2Net < 0)              bits.push(`净氧为负：这一批烧掉 ${num(-r.o2Net,0)} 个氧原子`);
-  if (r.convRate < 0.3)         bits.push(`转化率只有 ${num(r.convRate*100,0)}%`);
-  if (r.disaster)               bits.push('失控：爆罐，本批与储罐全部损失');
-  lastNote = {
-    text: (r.disaster ? '⚠ ' : '') +
-      `运行一批（T=${r.T}°C，${Chemistry.CATALYSTS[r.catKey].label}）：H₂ ${num(r.products.H2.H/2,1)} 份，` +
-      `原子对账${r.balanced ? '守恒 ✅' : '不守恒 ❌（这是 bug）'}。` +
-      (bits.length ? '　' + bits.join('；') + '。' : '　无异常。'),
-    bad: r.disaster || r.products.H2O2.H > 0.05 || r.o2Net < 0
-  };
-  renderAll();
-}
-function resetAll(){
-  state = JSON.parse(JSON.stringify(INITIAL));
-  lastNote = { text:'已重置到已知初始状态。', bad:false };
-  renderAll();
-}
+function clean(){ const before=state.pool.fouling; state.pool.fouling=0;
+  note(`清洗完成：结垢 ${(before*100).toFixed(1)}% → 0%。代价是停机（这一批不计产量）。`); }
+function resetAll(){ state=JSON.parse(JSON.stringify(INITIAL)); note('已重置到已知初始状态。'); }
 
-/* ---------- 引导场景 ---------- */
-const SCENES = [
-  { title:'1 · 在满值区间里跑一批',
-    lead:'最普通的一批：温度落在选择性满值区间内。先记住这两列产量读数在这个点的样子。',
-    watch:'看：选择性 100%、原子账守恒、无副产物；净氧是正还是负。',
-    steps:[
-      { label:'重置到初始状态', run:()=>resetAll() },
-      { label:'催化剂改成「铂片」', run:()=>setCat('pt') },
-      { label:'温度拧到 45 °C', run:()=>setT(45) },
-      { label:'运行一批', run:()=>runBatch() }
-    ]},
-  { title:'2 · 温度一路往上推',
-    lead:'同一个操作、同一个催化剂，只动温度。每按一步，记下「每批产量」和「每单位氧的产量」两列数。',
-    watch:'看：两列不会在同一点达到最大。至少有一列会在过了膝点之后掉下来 —— 那就是"拧过头的代价"。',
-    steps:[
-      { label:'重置到初始状态', run:()=>resetAll() },
-      { label:'催化剂改成「铂片」', run:()=>setCat('pt') },
-      { label:'温度 40 °C —— 记下两列', run:()=>setT(40) },
-      { label:'温度 60 °C —— 记下', run:()=>setT(60) },
-      { label:'温度 75 °C —— 记下', run:()=>setT(75) },
-      { label:'温度 90 °C —— 记下', run:()=>setT(90) },
-      { label:'温度 110 °C —— 记下', run:()=>setT(110) },
-      { label:'温度 150 °C —— 记下', run:()=>setT(150) }
-    ]},
-  { title:'3 · 温度拧不足',
-    lead:'反过来：温度很低。产物很干净，问题在别处。',
-    watch:'看：选择性 100%，但每批产量低得接不上下游 —— 瓶颈在产能，不在纯度。',
-    steps:[
-      { label:'重置到初始状态', run:()=>resetAll() },
-      { label:'催化剂改成「镍网」', run:()=>setCat('ni') },
-      { label:'温度拧到 25 °C', run:()=>setT(25) },
-      { label:'运行一批', run:()=>runBatch() }
-    ]},
-  { title:'4 · 越过失控阈值',
-    lead:'把温度推到 180 °C。注意：这个原型是确定性的 —— 不是"运气不好"，是曲线告诉你会发生。',
-    watch:'看：风险读数变红、爆罐、储罐清空、失控次数 +1。然后判断：灾难该是惩罚，还是内容？',
-    steps:[
-      { label:'重置到初始状态', run:()=>resetAll() },
-      { label:'温度拧到 180 °C', run:()=>setT(180) },
-      { label:'运行一批', run:()=>runBatch() }
-    ]},
-  { title:'5 · 瓶颈迁移（核心）',
-    lead:'同一条曲线，只换"你当前卡在什么上"。情境 A：你缺产能，要「每批 H₂ 产量」最大。情境 B：你缺氧气，要「每单位氧的 H₂ 产量」最大。',
-    watch:'看：两列读数各自的最大值出现在不同温度上。同一台机器、同一个产物，两个正确答案 —— 这就是"没有单调最优解"。',
-    steps:[
-      { label:'重置到初始状态', run:()=>resetAll() },
-      { label:'催化剂改成「铂片」', run:()=>setCat('pt') },
-      { label:'【A：缺产能】温度 60 °C —— 记下两列', run:()=>setT(60) },
-      { label:'【A】温度 75 °C —— 记下', run:()=>setT(75) },
-      { label:'【A】温度 90 °C —— 记下', run:()=>setT(90) },
-      { label:'【A】温度 110 °C —— 记下', run:()=>setT(110) },
-      { label:'比较：哪一列在 75°C 最大？哪一列在 90°C 最大？', run:()=>setT(75) },
-      { label:'换催化剂：镍网', run:()=>setCat('ni') },
-      { label:'镍网 53 °C', run:()=>setT(53) },
-      { label:'镍网 78 °C —— 两个峰会一起搬走吗？', run:()=>setT(78) },
-      { label:'结论（实测数字）', run:()=>{
-          lastNote = { text:'实测（本模型、投料 100、纯度 100）：铂片下「每单位氧产量」峰在 ≈75°C（3.00），「每批产量」峰在 ≈90°C（53.8）—— 同一个产物，两个正确答案差 15°C。换镍网差 25°C（53°C vs 78°C）。最优参数随"你卡在什么瓶颈"移动 —— 这正是《深海工艺》押注的那件事。你的判断：这样找平衡点，好玩吗？', bad:false };
-          renderAll();
-        }}
-    ]}
+/* ---------- 场景 ---------- */
+const SCENES=[
+ { title:'1 · 先用真实海水跑一批',
+   lead:'模式选【标准】。阳极是析氧型、T=80°C、P=6 atm。先看两件事：元素去向表里 Cl/Na/Mg/S/Ca/K 各去了哪，以及 H₂ 纯度是多少。',
+   watch:'看：痕量杂质（质量 3.3%、原子只有 0.69%）怎样让产物不合格——数值极小，工程上致命。',
+   steps:[
+     {label:'重置',run:()=>resetAll()},
+     {label:'模式切到【标准·5 旋钮】',run:()=>setMode('std')},
+     {label:'温度 80 °C',run:()=>setT(80)},
+     {label:'运行一批',run:()=>runBatch()}]},
+
+ { title:'2 · 换错阳极会发生什么',
+   lead:'同一批条件，只换阳极材料。工业上真的存在两类阳极：析氯型和析氧型。',
+   watch:'看：换成析氯型或石墨后，Cl₂ 暴涨、纯度跌破规格、合格产量直接归零——但耗氧更低（更省电）。',
+   steps:[
+     {label:'重置',run:()=>resetAll()},
+     {label:'模式【标准】',run:()=>setMode('std')},
+     {label:'阳极改成【石墨阳极】',run:()=>setEl('graphite')},
+     {label:'温度 110 °C',run:()=>setT(110)},
+     {label:'运行一批（看纯度）',run:()=>runBatch()},
+     {label:'阳极换成【钌铱涂层钛（析氯型）】',run:()=>setEl('dsaCl')},
+     {label:'阳极换成【铱钽涂层钛（析氧型）】',run:()=>setEl('dsaO2')},
+     {label:'再运行一批（纯度回来了吗？能耗呢？）',run:()=>runBatch()}]},
+
+ { title:'3 · 温度一路往上推',
+   lead:'同一台设备，只动温度。每一步记下「合格产量」这一列。',
+   watch:'看：合格产量先升后降。升是转化率，降有两个原因——走岔路，以及阳极开始氧化氯。',
+   steps:[
+     {label:'重置',run:()=>resetAll()},
+     {label:'模式【标准】',run:()=>setMode('std')},
+     {label:'温度 40 °C',run:()=>setT(40)},
+     {label:'温度 60 °C',run:()=>setT(60)},
+     {label:'温度 80 °C',run:()=>setT(80)},
+     {label:'温度 100 °C',run:()=>setT(100)},
+     {label:'温度 120 °C',run:()=>setT(120)},
+     {label:'温度 150 °C',run:()=>setT(150)}]},
+
+ { title:'4 · 越过失控阈值',
+   lead:'温度推到 180 °C。确定性：不是运气，是曲线。',
+   watch:'看：风险变红、爆罐、储罐清空、报废批数 +1。灾难该是惩罚还是内容？',
+   steps:[
+     {label:'重置',run:()=>resetAll()},
+     {label:'温度 180 °C',run:()=>setT(180)},
+     {label:'运行一批',run:()=>runBatch()}]},
+
+ { title:'5 · 结垢：一个有时间维度的代价',
+   lead:'高温 + 长停留 = 高产，但 Ca/Mg/S 会析出成垢，把换热面糊住，转化率一批比一批低。',
+   watch:'看：连跑 5 批，结垢度一路上升、转化率被折扣；同时 τ 变长也让氯污染加重——两个独立的失败模式一起咬，合格产量会掉到 0。点【清洗设备】只解决结垢那一半，纯度那一半得另想办法。',
+   steps:[
+     {label:'重置',run:()=>resetAll()},
+     {label:'模式【标准】',run:()=>setMode('std')},
+     {label:'温度 140 °C',run:()=>setT(140)},
+     {label:'停留时间 τ = 6',run:()=>setTau(6)},
+     {label:'运行第 1 批',run:()=>runBatch()},
+     {label:'再运行 4 批',run:()=>{runBatch();runBatch();runBatch();runBatch();}},
+     {label:'清洗设备',run:()=>clean()},
+     {label:'清洗后再运行一批（转化率回来了吗？）',run:()=>runBatch()}]},
+
+ { title:'6 · 旋钮变多：更好玩还是更糊？',
+   lead:'这是 v2 存在的理由。三种模式都跑一遍同一目标：把「合格 H₂ 产量」顶到最高。',
+   watch:'看：4 旋钮时你用几步就能顶到高位；6 旋钮时你要同时权衡"高压的溶解损失"和"高电流密度的过电位"。哪个更像在玩？',
+   steps:[
+     {label:'重置',run:()=>resetAll()},
+     {label:'【简化·4 旋钮】——先试 T=100 / P=6 / τ=6',run:()=>{setMode('simp');setT(100);setP(6);setTau(6);}},
+     {label:'【简化】再把 T 拧到 120 —— 合格产量还涨吗？',run:()=>setT(120)},
+     {label:'【标准·5 旋钮】——加上阳极选择，再来一遍',run:()=>setMode('std')},
+     {label:'【完整·6 旋钮】——最后加上电流密度',run:()=>setMode('full')},
+     {label:'【完整】电流密度 j 从 5 拧到 9',run:()=>setJ(9)},
+     {label:'【完整】压强 P 从 6 拧到 30',run:()=>setP(30)},
+     {label:'你觉得哪个模式最好玩？告诉我',run:()=>note('三种模式都试过了。请回答：旋钮变多之后，是更容易找到"啊哈"的点，还是更容易糊成一团？这个答案决定参数表最终留几个。',0,1)}]},
+
+ { title:'7 · 瓶颈迁移（v1 的核心主张，v2 是否还成立）',
+   lead:'同一条曲线，只换"你缺什么"。缺产能 → 最大化合格产量；缺氧气 → 最大化每单位氧的合格产量。',
+   watch:'看：两个不同的温度各赢一次。旋钮变多了，但"没有单一最优解"这件事仍然成立。',
+   steps:[
+     {label:'重置',run:()=>resetAll()},
+     {label:'模式【标准】',run:()=>setMode('std')},
+     {label:'温度 60 °C —— 记下两列？只有合格产量一列',run:()=>setT(60)},
+     {label:'温度 117 °C —— 合格产量峰在这附近',run:()=>setT(117)},
+     {label:'结论（含实测）',run:()=>note('实测（本模型、真实海水、析氧阳极）：合格产量峰 ≈117°C；但"每单位氧的合格产量"峰在 ≈74°C。缺氧气时正确答案低 43°C。每个旋钮都有自己的内部最优（T≈117 · τ≈8 · P≈6 · j≈7），所以不是"拧到底最好"。',0,1)}]}
 ];
 
-function renderTabs(){
-  $('tabs').innerHTML = SCENES.map((s,i)=>
-    `<button data-scene="${i}" class="${i===activeScene?'active':''}">${s.title}</button>`).join('');
-}
-function renderScene(){
-  const s = SCENES[activeScene];
-  $('scene').innerHTML = `
-    <h3>${s.title}</h3>
-    <p class="lead">${s.lead}</p>
+function renderTabs(){ $('tabs').innerHTML=SCENES.map((s,i)=>
+  `<button data-scene="${i}" class="${i===activeScene?'active':''}">${s.title}</button>`).join(''); }
+function renderScene(){ const s=SCENES[activeScene];
+  $('scene').innerHTML=`<h3>${s.title}</h3><p class="lead">${s.lead}</p>
     <p class="watch">👁 ${s.watch}</p>
-    <div class="steps">
-      ${s.steps.map((st,i)=>`
-        <div class="step ${stepDone[activeScene+'-'+i]?'done':''}">
-          <span class="n">${i+1}</span>
-          <button data-step="${i}">${st.label}</button>
-        </div>`).join('')}
-    </div>`;
-}
+    <div class="steps">${s.steps.map((st,i)=>`
+      <div class="step ${stepDone[activeScene+'-'+i]?'done':''}">
+        <span class="n">${i+1}</span><button data-step="${i}">${st.label}</button></div>`).join('')}</div>`; }
 
 /* ---------- 事件 ---------- */
-$('t').addEventListener('input', e => setT(Number(e.target.value)));
-$('purity').addEventListener('input', e => setPurity(Number(e.target.value)));
-$('feed').addEventListener('input', e => setFeed(Number(e.target.value)));
-$('run').addEventListener('click', runBatch);
-$('reset').addEventListener('click', resetAll);
-$('cats').addEventListener('click', e => { const b = e.target.closest('[data-cat]'); if (b) setCat(b.dataset.cat); });
-$('tabs').addEventListener('click', e => { const b = e.target.closest('[data-scene]'); if (b) { activeScene = Number(b.dataset.scene); stepDone = {}; renderTabs(); renderScene(); } });
-$('scene').addEventListener('click', e => {
-  const b = e.target.closest('[data-step]'); if (!b) return;
-  const i = Number(b.dataset.step);
-  SCENES[activeScene].steps[i].run();
-  stepDone[activeScene+'-'+i] = true;
-  renderScene();
+$('t').addEventListener('input',e=>setT(Number(e.target.value)));
+$('p').addEventListener('input',e=>setP(Number(e.target.value)));
+$('tau').addEventListener('input',e=>setTau(Number(e.target.value)));
+$('j').addEventListener('input',e=>setJ(Number(e.target.value)));
+$('run').addEventListener('click',runBatch);
+$('clean').addEventListener('click',clean);
+$('reset').addEventListener('click',resetAll);
+document.addEventListener('click',e=>{
+  const m=e.target.closest('[data-mode]'); if(m){setMode(m.dataset.mode);return;}
+  const c=e.target.closest('[data-cat]');  if(c){setCat(c.dataset.cat);return;}
+  const el=e.target.closest('[data-el]');  if(el){setEl(el.dataset.el);return;}
+  const sc=e.target.closest('[data-scene]'); if(sc){activeScene=Number(sc.dataset.scene);stepDone={};renderTabs();renderScene();return;}
+  const st=e.target.closest('#scene [data-step]');
+  if(st){const i=Number(st.dataset.step);SCENES[activeScene].steps[i].run();stepDone[activeScene+'-'+i]=true;renderScene();}
 });
 
-renderTabs();
-renderScene();
-renderAll();
+renderTabs(); renderScene(); renderAll();
 </script>
 </body>
 </html>
