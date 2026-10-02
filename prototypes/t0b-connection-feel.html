@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>T0b · 「连」的手感 —— 接错管子是化学反应变了（临时原型）</title>
+<style>
+  :root{--bg:#0f1418;--panel:#161d23;--panel2:#1d262e;--line:#2a353f;--ink:#dfe7ec;--dim:#8fa1ad;
+    --dimmer:#66757f;--accent:#2ecfd6;--danger:#ff5a3c;--warn:#e0a63c;--ok:#5fbf8f;--pipe:#3d5560}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.6 "Segoe UI","Microsoft YaHei",system-ui,sans-serif;padding:30px 18px 90px}
+  .wrap{max-width:1120px;margin:0 auto}
+  header{border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:24px}
+  h1{font-size:21px;margin:0 0 12px;font-weight:600}
+  .q{background:var(--panel);border-left:3px solid var(--accent);padding:14px 18px;border-radius:0 6px 6px 0;margin:0 0 12px;max-width:940px}
+  .q b{color:var(--accent)}
+  .caveat{color:var(--warn);font-size:13px;margin:0;max-width:940px}
+  .proto-tag{display:inline-block;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--warn);
+    border:1px solid #4a3a1c;border-radius:99px;padding:3px 10px;margin-bottom:12px}
+  section{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:18px 20px;margin-bottom:18px}
+  h2{font-size:15px;margin:0 0 14px;font-weight:600;color:var(--dim);letter-spacing:.4px}
+  h3{font-size:14px;margin:0 0 9px;font-weight:600}
+  h4{font-size:12.5px;margin:16px 0 7px;color:var(--dim);font-weight:600}
+  code{background:#0b1015;padding:1px 5px;border-radius:3px;font-size:12.5px}
+  .readouts{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:11px;margin-bottom:14px}
+  .ro{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:11px 13px}
+  .ro .k{font-size:12px;color:var(--dim)}
+  .ro .v{font-size:22px;font-weight:600;margin-top:3px;font-variant-numeric:tabular-nums}
+  .ro .s{font-size:11px;color:var(--dimmer);margin-top:2px}
+  .ro.good .v{color:var(--ok)} .ro.oxygen .v{color:var(--accent)}
+  .ro.hot{border-color:#5a2a20}.ro.hot .v{color:var(--danger)}
+  .ro.mid{border-color:#4a3a1c}.ro.mid .v{color:var(--warn)}
+  .badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:99px;border:1px solid}
+  .badge.clean{color:var(--ok);border-color:#2f4a3f}
+  .badge.usable{color:var(--accent);border-color:#1e4a4d}
+  .badge.refine{color:var(--warn);border-color:#4a3a1c}
+  .badge.junk{color:var(--danger);border-color:#5a2a20}
+  svg{display:block;width:100%;height:auto;background:#0b1015;border:1px solid var(--line);border-radius:8px;cursor:crosshair}
+  .port{cursor:pointer}
+  .port circle{stroke:#0b1015;stroke-width:2}
+  .port text{font-size:10.5px;fill:var(--dim);pointer-events:none}
+  .port:hover circle{stroke:var(--accent);stroke-width:3}
+  .port.sel circle{stroke:var(--accent);stroke-width:4}
+  .nodebox{fill:var(--panel2);stroke:var(--line);stroke-width:1.5}
+  .nodetxt{font-size:12px;fill:var(--ink);pointer-events:none}
+  .nodekind{font-size:10px;fill:var(--dimmer);pointer-events:none}
+  .wire{stroke:var(--pipe);stroke-width:3;fill:none;cursor:pointer}
+  .wire:hover{stroke:var(--danger);stroke-width:5}
+  .wire.bad{stroke:#7a3524}
+  .diag{font-size:12.5px;margin:6px 0 0;line-height:1.7}
+  .diag .bad{color:var(--danger)} .diag .warnc{color:var(--warn)} .diag .okc{color:var(--ok)}
+  table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+  th{text-align:left;color:var(--dim);font-weight:500;font-size:12px;border-bottom:1px solid var(--line);padding:4px 7px}
+  td{padding:3px 7px;border-bottom:1px dotted var(--line)}
+  td.n{text-align:right}
+  .pad{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px}
+  .row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center}
+  button{font:inherit;font-size:13.5px;color:var(--ink);background:var(--panel2);border:1px solid var(--line);
+    border-radius:6px;padding:7px 13px;cursor:pointer}
+  button:hover{border-color:#3d4b57;background:#222c35}
+  button.on{border-color:var(--accent);color:var(--accent)}
+  button.primary{border-color:var(--accent);color:var(--accent);font-weight:600}
+  button.reset{color:var(--dim)}
+  button.small{font-size:12px;padding:5px 9px}
+  .note{font-size:12.5px;color:var(--accent);min-height:20px;margin-top:12px}
+  .note.bad{color:var(--danger)} .note.warnc{color:var(--warn)}
+  .tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+  .tabs button{font-size:12.5px;padding:6px 11px}
+  .tabs button.active{background:var(--accent);border-color:var(--accent);color:#06211f;font-weight:600}
+  .scene{border-left:2px solid var(--line);padding-left:16px}
+  .scene .lead{color:var(--dim);font-size:13.5px;max-width:880px;margin:0 0 5px}
+  .scene .watch{font-size:13px;color:var(--warn);max-width:880px;margin:0 0 14px}
+  .steps{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+  .step{display:flex;align-items:center;gap:9px;width:100%}
+  .step .n{font-size:11px;color:var(--dimmer);min-width:17px}
+  .step button{text-align:left}
+  .step.done button{border-color:#2f4a3f;color:var(--dim)}
+  .hint{font-size:11.5px;color:var(--dimmer);line-height:1.6}
+  details.wiki{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:11px 15px;margin-top:14px}
+  details.wiki summary{cursor:pointer;font-size:13px;color:var(--accent);font-weight:600}
+  footer{color:var(--dimmer);font-size:12px;text-align:center;margin-top:26px;line-height:1.9}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="proto-tag">临时原型 · 用完即弃 · 不是生产代码</div>
+  <h1>T0b · 「连」的手感 —— <span style="color:var(--accent)">接错管子是化学反应变了</span></h1>
+  <p class="q">
+    <b>这个原型存在的理由</b>：概念文档的核心动词是 <b>连</b>，P1「机器是步骤不是配方」与 P3「连出来的工艺属于玩家」都建立在它之上。
+    但 T0 v1–v4 全是<b>单操作 demo，根本没有连线</b>——我们验证了核心动词的<b>旁支</b>。
+    这次验证<b>正片</b>。<br><br>
+    <b>要回答的问题</b>：把"接错管子 = 化学反应变了"这条线做成<b>可自由布线</b>之后，它还好玩吗？
+    还是说一旦能自由接，它反而变成一堆琐碎的管线活？
+  </p>
+  <p class="caveat">
+    ⚠️ 曲线仍是<b>游戏模型</b>。但有一条化学事实是真的、也是本原型的支点：
+    <b>Cl₂ 是气体，好除；它一旦进了结合器就变成 HCl 溶进水里，从水里除 HCl 比从气里除 Cl₂ 贵得多。</b>
+    所以"分离器接在哪一级"是<b>化学形态问题</b>，不是排版问题。
+  </p>
+</header>
+
+<section>
+  <h2>当前状态</h2>
+  <div class="readouts" id="readouts"></div>
+  <div class="pad">
+    <div><h4>物流账（每秒）</h4><table id="tblStreams"></table>
+         <h4>氯去哪了</h4><table id="tblCl"></table></div>
+    <div><h4>诊断</h4><div class="diag" id="diag"></div></div>
+  </div>
+  <div class="note" id="note"></div>
+</section>
+
+<section>
+  <h2>接线板 —— 点一个出口，再点一个入口；点连线本身可以删掉</h2>
+  <svg id="board" viewBox="0 0 880 330" preserveAspectRatio="xMidYMid meet"></svg>
+  <div class="row">
+    <button class="reset" id="clear">清空全部连线</button>
+    <button class="primary" id="auto">接一条最直的路（不接分离器）</button>
+    <button class="small" id="giveSep">暂停渐进（直接给我分离器）</button>
+  </div>
+  <div class="hint" id="lockmsg" style="margin-top:8px"></div>
+  <details class="wiki"><summary>📖 百科 —— 事实在这里（界面只管决策）</summary><div id="wikiBody"></div></details>
+</section>
+
+<section>
+  <h2>引导场景</h2>
+  <div class="tabs" id="tabs"></div><div class="scene" id="scene"></div>
+</section>
+
+<footer>
+  落点 <code>prototypes/t0b-connection-feel.html</code> · 纯模块 <code>Conn</code> 不依赖 DOM，可整体搬走<br>
+  命名：T0 系列是概念原型；<b>T0b 是第二个概念原型，专答"连"</b>（T0 只答了"拧"）
+</footer>
+</div>
+
+<script>
+/* =====================================================================
+   纯模块 Conn —— 不碰 DOM、不持状态。物流沿连线传播，算完再交给壳层。
+   ⚠️ 游戏模型。一条真事实撑着全部设计：Cl2（气）好除，HCl（溶于水）难除。
+   ===================================================================== */
+const Conn = (() => {
+  const M={H:1.008,O:15.999,Cl:35.45,Na:22.99,Mg:24.305,S:32.06,Ca:40.078,K:39.098};
+  const MF={O:85.84,H:10.82,Cl:1.94,Na:1.08,Mg:0.13,S:0.09,Ca:0.04,K:0.04};
+  const _mol={};let _t=0;for(const k in MF){_mol[k]=MF[k]/M[k];_t+=_mol[k];}
+  const AF={};for(const k in _mol)AF[k]=_mol[k]/_t;
+  const FEED=10, ATOMS_PER_UNIT=1000;
+  const SEA={};for(const k in AF)SEA[k]=AF[k]*ATOMS_PER_UNIT*FEED;
+  const WATER=SEA.O;                       // 水分子数 = O 原子数
+  const CL_OXIDIZED_FRAC=0.60;             // 阳极把 60% 的氯氧化（本原型固定，不开放这个旋钮）
+
+  /* 分离的两档：气态 / 液态。效率与耗氧都不同 —— 这就是"接在哪一级"的全部代价 */
+  const SEP={
+    gas:{ eff:0.95, o2PerCl:1.0, label:'气态除 Cl₂' },
+    liq:{ eff:0.665,o2PerCl:3.0, label:'水里除 HCl' }
+  };
+  /* 水的档位：每 1000 个水分子里含多少 Cl 原子 */
+  const TIERS=[
+    {key:'clean', label:'洁净', max:1,  desc:'直接送生命维持'},
+    {key:'usable',label:'可用', max:3,  desc:'能喝，但长期用会出问题'},
+    {key:'refine',label:'需精制',max:8, desc:'得再上一道精制，否则不能喝'},
+    {key:'junk',  label:'不可用',max:1e9,desc:'废物'}
+  ];
+  const tierOf = per1000 => TIERS.find(t=>per1000<=t.max).key;
+
+  /* ⚠️ 无货币系统（用户约束，2026-10-02）：本作没有金币/市场/售价。
+     所以低纯产物**没有"卖掉"这个出口**。只有三条出路，且全部以【氧气】计价。 */
+  const DISPOSAL={
+    deliver:{key:'deliver',label:'交付',  o2PerH2O:0,   desc:'进入下游或生命维持'},
+    store  :{key:'store',  label:'存贮',  o2PerH2O:0.02,desc:'占罐容，且持续耗氧 —— "先攒着以后再说"本身就是一个有代价的决定'},
+    destroy:{key:'destroy',label:'销毁',  o2PerH2O:0.12,desc:'把物质弄没不是免费的 —— 销毁也要耗氧'}
+  };
+  const deliverable = tier => tier==='clean'||tier==='usable';
+
+  /* ---- 节点与端口（坐标是画板坐标） ---- */
+  const NODES=[
+    {id:'src', label:'海水源', kind:'源', x:16,  y:196, w:112, h:44},
+    {id:'e1',  label:'E1 电解池', kind:'机器', x:176, y:170, w:132, h:96},
+    {id:'s1',  label:'S1 分离器', kind:'机器', x:396, y:56,  w:132, h:96},
+    {id:'c1',  label:'C1 结合器', kind:'机器', x:596, y:170, w:132, h:96},
+    {id:'out', label:'水出口', kind:'出口', x:788, y:196, w:78,  h:44}
+  ];
+  const PORTS=[
+    {id:'src.sea',   node:'src', dir:'out', x:128, y:218, color:'#2ecfd6', label:'海水',       carry:'sea'},
+    {id:'e1.in',     node:'e1',  dir:'in',  x:176, y:218, color:'#8fa1ad', label:'进料',       accept:['sea','waste','water','brine']},
+    {id:'e1.h2',     node:'e1',  dir:'out', x:308, y:190, color:'#5fbf8f', label:'H₂气 (带Cl)', carry:'gas'},
+    {id:'e1.o2',     node:'e1',  dir:'out', x:308, y:218, color:'#2ecfd6', label:'O₂气',       carry:'o2'},
+    {id:'e1.brine',  node:'e1',  dir:'out', x:308, y:246, color:'#66757f', label:'残液',       carry:'brine'},
+    {id:'s1.in',     node:'s1',  dir:'in',  x:396, y:104, color:'#8fa1ad', label:'受污染流',   accept:['gas','water']},
+    {id:'s1.clean',  node:'s1',  dir:'out', x:528, y:82,  color:'#5fbf8f', label:'洁净流',     carry:'same'},
+    {id:'s1.waste',  node:'s1',  dir:'out', x:528, y:126, color:'#e0a63c', label:'含氯物流',   carry:'waste'},
+    {id:'c1.h2',     node:'c1',  dir:'in',  x:596, y:190, color:'#5fbf8f', label:'H₂ 侧',      accept:['gas']},
+    {id:'c1.o2',     node:'c1',  dir:'in',  x:596, y:246, color:'#2ecfd6', label:'O₂ 侧',      accept:['o2']},
+    {id:'c1.out',    node:'c1',  dir:'out', x:728, y:218, color:'#2ecfd6', label:'水',         carry:'water'},
+    {id:'out.in',    node:'out', dir:'in',  x:788, y:218, color:'#8fa1ad', label:'水入口',     accept:['water']}
+  ];
+  const portById = id => PORTS.find(p=>p.id===id);
+
+  /* ---- 传播：小图，一次拓扑 + 一次回流近似 ---- */
+  /* 传播引擎：小图用【不动点迭代】而不是硬编码顺序 ——
+     因为"分离器接在 C1 之前/之后"会让依赖顺序整个反过来。硬编码顺序会让晚分离直接算不出来。
+     回流（成环）无法靠迭代收敛，故用【两趟近似】：先无回流算一遍 → 读出被接回的氯 → 整体重算。
+     （真实游戏中应是稳态循环解；原型用一次近似，在此写明。） */
+  function propagate(conns, clOxidized){
+    const byIn={};
+    conns.forEach(c=>{(byIn[c.to]=byIn[c.to]||[]).push(c.from);});
+    const streams={};
+    const incoming = pid => (byIn[pid]||[]).map(f=>streams[f]).filter(Boolean);
+    streams['src.sea']={kind:'sea', atoms:{...SEA}, clAtoms:SEA.Cl, label:'海水'};
+
+    for(let pass=0; pass<6; pass++){
+      if(!streams['e1.h2']){
+        const f=incoming('e1.in');
+        if(f.some(s=>s.kind==='sea')){
+          streams['e1.h2']   ={kind:'gas',  h2:WATER, o2:0, water:0, clAtoms:clOxidized, label:'H₂气（带 Cl₂）'};
+          streams['e1.o2']   ={kind:'o2',   h2:0, o2:WATER*0.5, water:0, clAtoms:0, label:'O₂气'};
+          streams['e1.brine']={kind:'brine',h2:0, o2:0, water:0, clAtoms:SEA.Cl*(1-CL_OXIDIZED_FRAC), label:'残液'};
+        }
+      }
+      if(!streams['s1.waste']){
+        const f=incoming('s1.in');
+        if(f.length){
+          const src=f[0];
+          const mode = src.kind==='water' ? 'liq' : 'gas';
+          const sp=SEP[mode];
+          const removed=src.clAtoms*sp.eff;
+          streams['s1.clean']={...src, clAtoms:src.clAtoms-removed, label:(src.label||'流')+' · 已除氯'};
+          streams['s1.waste']={kind:'waste', h2:0,o2:0,water:0, clAtoms:removed, label:'含氯物流',
+                               sepMode:mode, o2Cost:removed*sp.o2PerCl};
+        }
+      }
+      if(!streams['c1.out']){
+        const h=incoming('c1.h2'), o=incoming('c1.o2');
+        if(h.length&&o.length){
+          const produced=Math.min(h[0].h2||0,(o[0].o2||0)*2);
+          if(produced>0) streams['c1.out']={kind:'water', h2:0,o2:0, water:produced,
+            clAtoms:(h[0].clAtoms||0), label:'水', fromHcl:(h[0].clAtoms||0)>0};
+        }
+      }
+    }
+    return streams;
+  }
+
+  function evaluate(conns){
+    const byIn={};
+    conns.forEach(c=>{(byIn[c.to]=byIn[c.to]||[]).push(c.from);});
+    const BASE=SEA.Cl*CL_OXIDIZED_FRAC;
+
+    /* 第一趟：无回流 —— 只为读出"被接回 E1 的那股流里有多少氯" */
+    const s0=propagate(conns, BASE);
+    let recycledCl=0;
+    for(const f of (byIn['e1.in']||[])){ const s=s0[f]; if(s&&s.kind!=='sea'&&s.clAtoms>0) recycledCl+=s.clAtoms; }
+    const clOxidized = BASE + recycledCl*1.6;
+
+    /* 第二趟：把回流的氯算进去，整体重算 */
+    const streams = recycledCl>0 ? propagate(conns, clOxidized) : s0;
+    const incoming = pid => (byIn[pid]||[]).map(f=>streams[f]).filter(Boolean);
+
+    const outs=incoming('out.in');
+    const w=outs.length?outs[0]:null;
+    let o2Cost=0, sepModeUsed=null;
+    if(streams['s1.waste']){ o2Cost=streams['s1.waste'].o2Cost; sepModeUsed=streams['s1.waste'].sepMode; }
+    const per1000 = w&&w.water>0 ? (w.clAtoms/w.water)*1000 : 0;
+    const tier = w ? tierOf(per1000) : null;
+
+    return {streams, incoming, clOxidized, recycledCl,
+      water:w, waterOut:w?w.water:0, per1000, tier,
+      o2Cost, sepMode:sepModeUsed,
+      hasSep:!!streams['s1.waste'],
+      sepPlacedAfterC1: !!(streams['s1.waste']&&streams['s1.waste'].sepMode==='liq')};
+  }
+
+  function diagnose(g,conns){
+    const d=[], has=(pid)=>conns.some(c=>c.to===pid), from=(pid)=>conns.filter(c=>c.to===pid);
+    if(!has('e1.in')) d.push(['bad','E1 没有进料 —— 海水源到电解池的管子没接。']);
+    if(!g.streams['e1.h2']) d.push(['bad','E1 空转（没接到海水）。']);
+    if(g.streams['e1.h2']&&!has('c1.h2')&&!has('s1.in'))
+      d.push(['bad','H₂ 气没有任何去处。它必须被接到 C1 或 S1 —— <b>每个出口都必须被接住</b>。']);
+    if(has('s1.in')&&!g.streams['s1.clean'])
+      d.push(['warnc','S1 的入口是空的（上游没接或上游是空的）。']);
+    if(g.streams['s1.waste']&&!has('c1.h2')&&!has('out.in'))
+      d.push(['warnc','分离出的洁净流没有去处。']);
+    if(!has('out.in')) d.push(['bad','水没有接到出口，所以交付为 0。']);
+    if(has('c1.h2')&&!has('c1.o2')) d.push(['warnc','C1 只接到 H₂ 侧，缺 O₂ —— 结合器不工作。']);
+    if(has('c1.o2')&&!has('c1.h2')) d.push(['warnc','C1 只接到 O₂ 侧，缺 H₂ —— 结合器不工作。']);
+
+    /* 关键诊断：污染路径 */
+    if(g.water){
+      if(g.tier==='clean') d.push(['okc','水是【洁净】：氯在进入结合器<b>之前</b>就被拿掉了。']);
+      else if(g.sepPlacedAfterC1) d.push(['warnc','水落在【'+Conn.TIERS.find(t=>t.key===g.tier).label+'】：分离器接在 C1 <b>之后</b>。Cl₂ 已经变成 HCl 溶进水里，只能按液态档除（效率更低、耗氧 ×3）。']);
+      else if(!g.hasSep) d.push(['bad','水落在【'+Conn.TIERS.find(t=>t.key===g.tier).label+'】：<b>没有分离器</b>，阳极氧化的 Cl₂ 直接进了结合器，在那里变成 HCl 溶进水里。']);
+    }
+    /* 陷阱 */
+    for(const c of from('e1.in')){
+      const s=g.streams[c.from]; if(!s||s.kind==='sea') continue;
+      d.push(['bad','⚠ 你把 <b>'+(s.label||s.kind)+'</b> 接回了电解池 —— 氯重新进入阳极，氯氧化量被放大到 <b>'+g.clOxidized.toFixed(1)+'</b> 原子（基准 '+ (Conn.SEA.Cl*Conn.CL_OXIDIZED_FRAC).toFixed(1) +'）。<b>"循环利用"听起来永远对，但在这里是错的。</b>']);
+    }
+    if(g.streams['e1.brine']&&!conns.some(c=>c.from==='e1.brine'))
+      d.push(['warnc','残液没接（本原型里只警告，不影响水档位）。']);
+    if(!d.length) d.push(['okc','全部端口都接上了，物流通了。']);
+    return d;
+  }
+  return {SEA,M,MF,AF,WATER,FEED,CL_OXIDIZED_FRAC,SEP,TIERS,tierOf,DISPOSAL,deliverable,NODES,PORTS,portById,evaluate,diagnose};
+})();
+
+
+/* ====================== 壳层 ====================== */
+let conns=[];              // [{from, to}]
+let selPort=null;
+let sepUnlocked=false;     // 渐进：先让你烧一次，再给分离器
+let waterAction='deliver'; // 无货币 ⇒ 低纯产物只能 交付/存贮/销毁，三条都（可能）耗氧
+let activeScene=0, stepDone={};
+let lastNote={text:'先只接最直的一条路试试：海水源 → E1 → C1 → 水出口。',bad:false};
+const $=id=>document.getElementById(id);
+const num=(v,d=1)=>Number(v).toFixed(d);
+const P=Conn.portById;
+
+function graph(){ const g=Conn.evaluate(conns); g.diag=Conn.diagnose(g,conns); return g; }
+
+/* ---- 画板 ---- */
+const NS='http://www.w3.org/2000/svg';
+function el(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+function draw(){
+  const svg=$('board'); svg.innerHTML='';
+  // 连线（贝塞尔）
+  conns.forEach((c,i)=>{
+    const a=P(c.from), b=P(c.to); if(!a||!b) return;
+    const dx=Math.max(40,Math.abs(b.x-a.x)*0.45);
+    const path=el('path',{d:`M ${a.x} ${a.y} C ${a.x+dx} ${a.y}, ${b.x-dx} ${b.y}, ${b.x} ${b.y}`,
+      class:'wire'+(!sepUnlocked&&(c.from.startsWith('s1')||c.to==='s1.in')?' bad':'')});
+    path.addEventListener('click',()=>{conns.splice(i,1);note('删掉了一条连线。',0,1);});
+    svg.appendChild(path);
+  });
+  // 节点
+  Conn.NODES.forEach(n=>{
+    svg.appendChild(el('rect',{x:n.x,y:n.y,width:n.w,height:n.h,rx:7,class:'nodebox'}));
+    const t=el('text',{x:n.x+10,y:n.y+19,class:'nodetxt'}); t.textContent=n.label; svg.appendChild(t);
+    const k=el('text',{x:n.x+10,y:n.y+33,class:'nodekind'}); k.textContent=n.kind; svg.appendChild(k);
+  });
+  // 端口
+  Conn.PORTS.forEach(p=>{
+    const locked=(p.node==='s1')&&!sepUnlocked;
+    const g=el('g',{class:'port'+(selPort===p.id?' sel':'')});
+    g.appendChild(el('circle',{cx:p.x,cy:p.y,r:7,fill:locked?'#3a434a':p.color}));
+    const t=el('text',{x:p.x+(p.dir==='out'?11:-11),y:p.y+(p.dir==='out'?-10:14),
+      'text-anchor':p.dir==='out'?'start':'end'});
+    t.textContent=(locked?'🔒 ':'')+p.label; g.appendChild(t);
+    g.addEventListener('click',ev=>{ev.stopPropagation();clickPort(p,locked);});
+    svg.appendChild(g);
+  });
+}
+function clickPort(p,locked){
+  if(locked){ note('分离器还没解锁 —— 你还没见过被污染的水。先跑一次看看会怎样。',0,1); return; }
+  if(!selPort){
+    if(p.dir!=='out'){ note('要从一个【出口】开始点。',1); return; }
+    selPort=p.id; note('已选出口：'+p.label+' —— 再点一个入口就能接上。'); draw(); return;
+  }
+  if(selPort===p.id){ selPort=null; note('取消选择。'); draw(); return; }
+  const a=P(selPort);
+  if(p.dir!=='in'){ selPort=p.id; note('改成从出口「'+Conn.PORTS.find(x=>x.id===p.id).label+'」开始。'); draw(); return; }
+  if(!p.accept||!p.accept.includes(a.carry)&&a.carry!=='same'){
+    note('接不上：'+a.label+' 是 ['+a.carry+']，而 '+p.label+' 只接受 ['+(p.accept||[]).join('/')+']。',1);
+    selPort=null; draw(); return;
+  }
+  if(conns.some(c=>c.from===selPort&&c.to===p.id)){ note('这条已经接过了。'); selPort=null; draw(); return; }
+  conns.push({from:selPort,to:p.id});
+  const r=graph();
+  if(r.tier&&r.tier!=='clean'&&!sepUnlocked){ sepUnlocked=true; }
+  note('接上了：'+a.label+' → '+p.label+(sepUnlocked?'　🔓 你第一次见到了不合格的水，分离器 S1 已解锁。':''),0,r.tier&&r.tier!=='clean');
+  selPort=null; draw(); render();
+}
+function note(t,bad,warn){ lastNote={text:t,bad:!!bad,warn:!!warn}; render(); }
+function setNoteOnly(){}
+
+/* ---- 渲染 ---- */
+function render(){
+  const g=graph();
+  const t=g.tier?Conn.TIERS.find(x=>x.key===g.tier):null;
+  const cls=!t?'':(t.key==='clean'?'good':t.key==='usable'?'':t.key==='refine'?'mid':'hot');
+  /* 无货币系统：只有 洁净/可用 能交付。不能交付时，被迫落到 存贮 或 销毁 —— 两条都耗氧。 */
+  const canDeliver = !!t && Conn.deliverable(t.key);
+  if(!canDeliver && waterAction==='deliver') waterAction='store';
+  const disposeO2 = g.waterOut>0 ? g.waterOut*Conn.DISPOSAL[waterAction].o2PerH2O : 0;
+  $('readouts').innerHTML=`
+    <div class="ro ${cls}"><div class="k">交付水档位</div>
+      <div class="v">${t?t.label:'—'}</div><div class="s">${t?t.desc:'还没接到水出口'}</div></div>
+    <div class="ro oxygen"><div class="k">纯净水产量</div><div class="v">${num(g.waterOut,0)}</div>
+      <div class="s">分子/秒${g.waterOut>0?'（水分子 3310 是满产）':''}</div></div>
+    <div class="ro ${g.o2Cost>0?'mid':''}"><div class="k">分离耗氧</div><div class="v">${num(g.o2Cost,0)}</div>
+      <div class="s">${g.sepMode?('档位：'+Conn.SEP[g.sepMode].label):'没有分离器'}</div></div>
+    <div class="ro ${g.per1000>3?'hot':''}"><div class="k">水里的氯</div><div class="v">${num(g.per1000,2)}</div>
+      <div class="s">每 1000 个水分子含 Cl 原子数</div></div>
+    <div class="ro"><div class="k">未接端口</div><div class="v">${Conn.PORTS.filter(p=>{
+      const isOut=p.dir==='out'; const ok=isOut?conns.some(c=>c.from===p.id):conns.some(c=>c.to===p.id);
+      if(p.node==='s1'&&!sepUnlocked) return false; return !ok;}).length}</div>
+      <div class="s">每个出口都必须被接住</div></div>
+    <div class="ro ${disposeO2>0?'mid':''}"><div class="k">处置耗氧</div>
+      <div class="v">${num(disposeO2,0)}</div>
+      <div class="s">${canDeliver?'当前：交付（无额外代价）':'<b>不能交付</b> —— 只能存贮或销毁，两条都耗氧'}</div>
+      <div class="row" style="margin-top:7px">${Object.values(Conn.DISPOSAL).map(d=>
+        `<button class="small ${waterAction===d.key?'on':''}" data-disp="${d.key}" ${(!canDeliver&&d.key==='deliver')?'disabled style="opacity:.4"':''}>${d.label}</button>`).join('')}</div>
+      <div class="s" style="margin-top:5px">${Conn.DISPOSAL[waterAction].desc}</div></div>`;
+
+  const rows=Conn.PORTS.filter(p=>g.streams[p.id]).map(p=>{
+    const s=g.streams[p.id];
+    return `<tr><td>${p.label}</td><td>${s.kind}</td><td class="n">${num(s.clAtoms,1)}</td></tr>`;});
+  $('tblStreams').innerHTML=`<tr><th>物流</th><th>类型</th><th class="n">带 Cl 原子</th></tr>`+
+    (rows.length?rows.join(''):'<tr><td colspan="3" style="color:#66757f">还没接出任何物流</td></tr>');
+
+  $('tblCl').innerHTML=`<tr><th>去向</th><th class="n">Cl 原子/秒</th></tr>
+    <tr><td>海水带入</td><td class="n">${num(Conn.SEA.Cl,1)}</td></tr>
+    <tr><td>阳极氧化（进气流）</td><td class="n">${num(g.clOxidized,1)}</td></tr>
+    ${g.recycledCl>0?`<tr style="color:#ff5a3c"><td>其中来自回流</td><td class="n">${num(g.clOxidized-Conn.SEA.Cl*Conn.CL_OXIDIZED_FRAC,1)}</td></tr>`:''}
+    <tr><td>进入水里的</td><td class="n">${num(g.water?g.water.clAtoms:0,1)}</td></tr>
+    <tr><td>被分离拿走</td><td class="n">${num(g.streams['s1.waste']?g.streams['s1.waste'].clAtoms:0,1)}</td></tr>`;
+
+  $('diag').innerHTML=g.diag.map(([k,txt])=>`<div class="${k}">• ${txt}</div>`).join('');
+  const n=$('note'); n.className='note'+(lastNote.bad?' bad':(lastNote.warn?' warnc':'')); n.textContent=lastNote.text;
+  $('lockmsg').textContent=sepUnlocked
+    ? '分离器 S1 已解锁。现在的问题是：<b>接在 C1 之前，还是之后？</b>'
+    : '🔒 分离器 S1 还锁着 —— 你还没见过不合格的水。先按"最直的路"接一次，看会发生什么。';
+  $('giveSep').textContent=sepUnlocked?'分离器已解锁':'暂停渐进（直接给我分离器）';
+}
+function renderWiki(){
+  $('wikiBody').innerHTML=`
+    <h4>1 · 为什么"接在哪一级"不是排版问题</h4>
+    <p class="hint">海水电解时，阳极会把一部分 <b>Cl⁻ 氧化成 Cl₂</b>。Cl₂ 是<b>气体</b>，跟 H₂ 一起走 —— 冷凝、碱洗、吸附都能把它拿掉。<br>
+    但如果它先进了 <b>C1 结合器</b>（H₂ + O₂ → H₂O），它会变成 <b>HCl 溶进水里</b>（盐酸）。<b>从水里除 HCl 要难得多</b> —— 这就是本原型的支点。</p>
+    <table><tr><th>分离器位置</th><th class="n">除氯效率</th><th class="n">相对耗氧</th></tr>
+    <tr><td>C1 <b>之前</b>（气态除 Cl₂）</td><td class="n">${(Conn.SEP.gas.eff*100).toFixed(0)}%</td><td class="n">×1</td></tr>
+    <tr><td>C1 <b>之后</b>（水里除 HCl）</td><td class="n">${(Conn.SEP.liq.eff*100).toFixed(0)}%</td><td class="n">×3</td></tr></table>
+    <h4>2 · 水的档位（按每 1000 个水分子里的 Cl 原子数）</h4>
+    <table><tr><th>档位</th><th class="n">门槛</th><th>后果</th></tr>
+    ${Conn.TIERS.map(t=>`<tr><td><span class="badge ${t.key}">${t.label}</span></td>
+      <td class="n">${t.max>1e8?'—':'≤ '+t.max}</td><td>${t.desc}</td></tr>`).join('')}</table>
+    <h4>3 · 每个出口都必须被接住</h4>
+    <p class="hint">E1 有三个出口（H₂气 / O₂气 / 残液）—— <b>少接一个，那股流就无处可去</b>。这是"连"的基本纪律，也是它琐碎感的来源：
+    真实的管线活有一半是"别忘了接那根管子"。<b>本原型要你判断的正是这一点 —— 这种琐碎是负担，还是构成感？</b></p>
+    <h4>4 · 那个陷阱：把含氯物流接回电解池</h4>
+    <p class="hint">看起来是"循环利用"（工业上确实常见回流），但在这里它把氯<b>送回阳极</b>，氯氧化量被放大，
+    于是下游污染更重。<b>"循环利用"听起来永远对，但在这里是错的</b> —— 这个错答案必须存在，否则"连"就没有取舍。</p>
+    <h4>5 · 没有货币系统（这条会管住所有设计）</h4>
+    <p class="hint"><b>本作没有金币、没有市场、没有售价。</b>所以低纯产物<b>没有"卖掉"这个出口</b>——
+    它不会"折价出售"，它在账上是<b>负值</b>：你得<b>花氧气</b>去处理它。</p>
+    <table><tr><th>出路</th><th class="n">耗氧</th><th>说明</th></tr>
+    ${Object.values(Conn.DISPOSAL).map(d=>`<tr><td>${d.label}</td>
+      <td class="n">${d.o2PerH2O.toFixed(2)}</td><td>${d.desc}</td></tr>`).join('')}</table>
+    <p class="hint">所以本作唯一的硬通货是 <b>氧气</b>（它同时是生命维持与工业能源，是同一个数字）。
+    低纯产物的三条出路 —— <b>分离提纯 / 存贮 / 销毁</b> —— 全部以氧气计价，<b>没有一条是免费的</b>。
+    这也让"我当初为什么会产出它"变成一个不得不面对的问题。</p>
+    <p class="hint" style="color:var(--warn)">⚠️ 曲线是<b>游戏模型</b>。但"Cl₂ 好除、HCl 难除"这条形态差异是真的。</p>`;
+}
+
+/* ---- 预设 ---- */
+function clearAll(){ conns=[]; selPort=null; note('连线已清空。'); draw(); }
+function autoWire(){
+  conns=[{from:'src.sea',to:'e1.in'},{from:'e1.h2',to:'c1.h2'},
+         {from:'e1.o2',to:'c1.o2'},{from:'c1.out',to:'out.in'}];
+  selPort=null;
+  const r=graph();
+  if(r.tier&&r.tier!=='clean') sepUnlocked=true;
+  note('接好了最直的一条路：海水 → E1 → C1 → 出口。<b>看水落到了哪一档。</b>',0,true);
+  draw(); render();
+}
+function giveSep(){ sepUnlocked=true; note('分离器 S1 已解锁 —— 现在可以试"接在 C1 之前"和"之前之后"的差别了。',0,1); draw(); render(); }
+function resetAll(){ conns=[]; selPort=null; sepUnlocked=false;
+  note('已重置：连线清空，分离器重新锁上。'); draw(); render(); }
+
+/* ---- 场景 ---- */
+const SCENES=[
+ {title:'1 · 先接最直的那条路（故意的）',
+  lead:'点"接一条最直的路"：海水 → E1 → C1 → 水出口，<b>不接分离器</b>。这是任何人第一次都会接的样子。',
+  watch:'看：水落到了"需精制"。诊断栏会告诉你为什么——Cl₂ 进了结合器，变成 HCl 溶在水里，这时候再想除它就贵了。',
+  steps:[{label:'重置',run:()=>resetAll()},{label:'接一条最直的路',run:()=>autoWire()},
+         {label:'读完诊断栏再说',run:()=>note('关键：你此刻并没有做错任何"操作"，你只是还没意识到<b>氯会跟着 H₂ 走</b>。<br>这一版的设计赌注就是——先让你烧一次，再给你工具。')}]},
+
+ {title:'2 · 分离器该接在哪一级？（这是本原型的主问题）',
+  lead:'现在 S1 解锁了。把它接在 <b>C1 之前</b>，接着再改成接在 <b>C1 之后</b>，两条都对比一遍。',
+  watch:'看：两者水都很干净，但"分离耗氧"差 2 倍以上。而且注意——接在之后时，除氯效率更低（水里除 HCl 比气里除 Cl₂ 难）。',
+  steps:[{label:'重置',run:()=>resetAll()},{label:'接一条最直的路',run:()=>autoWire()},
+         {label:'暂停渐进（直接给我分离器）',run:()=>giveSep()},
+         {label:'把 H₂ 气改成先过 S1：删掉 E1.H₂→C1.H₂，改接 E1.H₂→S1.入口，再把 S1.洁净流→C1.H₂',run:()=>{
+            conns=conns.filter(c=>!(c.from==='e1.h2'&&c.to==='c1.h2'));
+            conns.push({from:'e1.h2',to:'s1.in'});conns.push({from:'s1.clean',to:'c1.h2'});
+            note('分离器接在 C1 <b>之前</b>（气态除 Cl₂）。看水档位与耗氧。',0,1);draw();render();}},
+         {label:'再改成接在 C1 之后：删掉两条 S1 连线，改成 C1.水→S1.入口，S1.洁净流→水出口',run:()=>{
+            conns=conns.filter(c=>!(c.from==='e1.h2'&&c.to==='s1.in')&&!(c.from==='s1.clean'&&c.to==='c1.h2'));
+            conns=conns.filter(c=>!(c.from==='c1.out'&&c.to==='out.in'));
+            conns.push({from:'e1.h2',to:'c1.h2'});
+            conns.push({from:'c1.out',to:'s1.in'});conns.push({from:'s1.clean',to:'out.in'});
+            note('分离器改接到 C1 <b>之后</b>（水里除 HCl）。水还是干净的，但耗氧翻倍、效率更低。',0,1);draw();render();}},
+         {label:'哪个更划算？',run:()=>note('<b>答案：早接。</b>同样的水质，气态分离耗氧只有液态的约一半，效率还更高。<br>但代价是——<b>你得先知道氯会跟着 H₂ 走，才会想到要早接</b>。这就是"连"的决策内容：它奖励的是<b>预判</b>，不是手速。')}]},
+
+ {title:'3 · 那个陷阱（本作最诱人的错答案）',
+  lead:'接一条最直的路，然后把 <b>分离器产出的"含氯物流"接回电解池</b>——看起来像循环利用。',
+  watch:'看：氯氧化量被放大，水里的氯不降反升。诊断栏会明说这是错的。',
+  steps:[{label:'重置',run:()=>resetAll()},{label:'接一条最直的路',run:()=>autoWire()},
+         {label:'暂停渐进',run:()=>giveSep()},
+         {label:'把 H₂ 气先过 S1',run:()=>{conns=conns.filter(c=>!(c.from==='e1.h2'&&c.to==='c1.h2'));
+            conns.push({from:'e1.h2',to:'s1.in'});conns.push({from:'s1.clean',to:'c1.h2'});draw();render();}},
+         {label:'把 S1.含氯物流 接回 E1.进料 —— 好的，试一下',run:()=>{
+            conns.push({from:'s1.waste',to:'e1.in'});note('含氯物流接回了电解池。看"氯去哪了"表和水档位。',0,1);draw();render();}},
+         {label:'结论',run:()=>note('工业上回流确实常见（未反应物回收），<b>但把污染物接回上游是另一回事</b>——你等于把刚拿掉的氯又倒回反应器。<br>这个错答案必须存在，否则"连"就只剩拼图，没有判断。')}]},
+
+ {title:'4 · 渐进：先烧一次再给工具，还是不烧就给？',
+  lead:'跑完上面几关，两种体验你都尝过了：第一次是"没分离器可用，只能眼看着水不合格"，后来才解锁。',
+  watch:'看：哪种让你更想弄明白"那怎么办"？这是 L1 逐步解锁在"连"这个动作上的版本。',
+  steps:[{label:'重置（分离器重新锁上）',run:()=>resetAll()},
+         {label:'接最直的路 —— 此刻你没有分离器',run:()=>autoWire()},
+         {label:'看"未接端口"和诊断，然后告诉我感受',run:()=>note('这是本原型最后一个要你判断的点：<b>「先烧一次再给工具」比「一开始就把所有工具给你」更好，还是更烦人？</b>')}]},
+
+ {title:'5 · 这一轮要你回答的',
+  lead:'全部跑完之后。',
+  watch:'',
+  steps:[{label:'给出你的判断',run:()=>note('三个问题：① <b>「连」好玩吗</b>——注意它有一半是"别忘了接那根管子"的琐碎，这种琐碎是负担还是构成感？② <b>「分离器接在哪一级」这个决策有意思吗</b>，它能撑起一个游戏的核心动词吗？③ <b>接错→诊断→改接线</b> 这个循环，让你想再试一次吗？',0,1)}]}
+];
+function renderTabs(){$('tabs').innerHTML=SCENES.map((s,i)=>
+  `<button data-scene="${i}" class="${i===activeScene?'active':''}">${s.title}</button>`).join('');}
+function renderScene(){const s=SCENES[activeScene];
+  $('scene').innerHTML=`<h3>${s.title}</h3><p class="lead">${s.lead}</p>`+
+    (s.watch?`<p class="watch">👁 ${s.watch}</p>`:'')+
+    `<div class="steps">${s.steps.map((st,i)=>`<div class="step ${stepDone[activeScene+'-'+i]?'done':''}">
+      <span class="n">${i+1}</span><button data-step="${i}">${st.label}</button></div>`).join('')}</div>`;}
+
+/* ---- 事件 ---- */
+$('clear').addEventListener('click',clearAll);
+$('auto').addEventListener('click',autoWire);
+$('giveSep').addEventListener('click',giveSep);
+document.addEventListener('click',e=>{
+  const dp=e.target.closest('[data-disp]');
+  if(dp){ waterAction=dp.dataset.disp; const d=Conn.DISPOSAL[waterAction], g=graph();
+    note('水改为【'+d.label+'】——'+d.desc+
+      (d.o2PerH2O>0?'　代价：'+num(g.waterOut*d.o2PerH2O,0)+' 氧原子/秒。':'　无额外代价。'),
+      0,d.o2PerH2O>0);
+    render(); return; }
+  const sc=e.target.closest('[data-scene]');
+  if(sc){activeScene=Number(sc.dataset.scene);stepDone={};renderTabs();renderScene();return;}
+  const st=e.target.closest('#scene [data-step]');
+  if(st){const i=Number(st.dataset.step);SCENES[activeScene].steps[i].run();stepDone[activeScene+'-'+i]=true;renderScene();}
+});
+$('board').addEventListener('click',()=>{ if(selPort){selPort=null;note('取消选择。');draw();} });
+renderTabs();renderScene();renderWiki();draw();render();
+</script>
+</body>
+</html>
