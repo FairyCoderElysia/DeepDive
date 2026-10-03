@@ -469,6 +469,22 @@ formulas:
       而那时 B2 的整条通道就失去了"慢性、看不见"的特性（那正是它存在的理由）。
     referenced_by: [heatmap-base-layer]
 
+  - name: visual_arbitration_flow
+    description: 视觉裁决流程 —— B13 的实质规则（从 art-bible §3④ 推出来的）。
+    expression: |
+      一个状态要区分：
+          1. 先问：能用【形状/图标/线型】区分吗？ 能 -> 用它（形状优先）
+          2. 不能 -> 才动颜色；而一旦动颜色，【必须交代】它凭什么是【氧气】或【危险】
+             （交代不出 -> 它就不该占用饱和度预算）
+    variables: [状态, 形状手段, 颜色手段]
+    referenced_by: [visual-identity-surface]
+
+  - name: emissive_truthfulness
+    description: 自发光必须与设备的真实状态对应。
+    expression: "自发光强度(设备) = f(该设备的真实状态)"
+    forbidden: "看起来在跑、其实停了 —— 那正是'暗算'的视觉版本"
+    referenced_by: [visual-identity-surface]
+
 constants:
 
   # ---------- 计量与口径 ----------
@@ -1269,3 +1285,35 @@ constants:
     value: "它是主图层、默认可用 —— 不是可选 debug overlay"
     source: "概念文档 line 360（争'可选 debug overlay' vs '常规视图' -> 选常规视图）"
     referenced_by: [heatmap-base-layer]
+
+  # ---------- B13 引入的常量 ----------
+
+  - name: SURFACE_COLOR_REGIME
+    value: "表层（常规态）= 冷白偏青 · 低对比 · 亮部由【设备自发光】提供（不是天光）"
+    source: "art-bible §4 的分区色温规则表"
+    note: "冷白偏青是底色基调（青是留白的：氧青是信号色，表层用的是它的低饱和版本）；低对比不是'画面清淡'而是给信号色留出对比空间"
+    referenced_by: [visual-identity-surface]
+
+  - name: ELEMENT_GROUP_DISTINCTION
+    value: "4 个分类组：形状/图案为主 + 低饱和色相为辅"
+    why_shape_first: "形状保证在色盲下仍可读（§3④ 形状优先）"
+    why_hue_allowed: "见 SATURATION_BUDGET_IS_ABOUT_SATURATION —— 低饱和色相是免费的，且保证在繁忙画面里能快速识组"
+    referenced_by: [visual-identity-surface]
+
+  - name: SATURATION_BUDGET_IS_ABOUT_SATURATION
+    value: "§1 的'饱和度是有限预算'限制的是【饱和度】，不是【色相的数量】"
+    consequence: |
+      低饱和色相是免费的 -> 4 个分类组可以有 4 个低饱和色相，而不占用"氧气/危险"的额度。
+      若误读成"色相总数有限"，就会得出"分类组不能用颜色"这个过强的结论，
+      而那会把一个可用的自由度白白扔掉（在繁忙画面里看图识组会比看色慢）。
+    warning: "这是一个容易犯的误读 —— 它把一条【预算】读成了一条【禁令】"
+    referenced_by: [visual-identity-surface]
+
+  - name: EMISSIVE_IS_INFORMATION
+    value: "设备自发光：信息优先、装饰附带 —— 整屏的明暗是一个【信息通道】"
+    why: |
+      art-bible 说"亮部由设备自发光提供，不是天光"。若它只是装饰 -> 世界的亮度就是随机的、
+      "暗下去"没有意义；若它是信息 -> "暗下去"真的意味着"停了"。
+    discipline: "自发光必须与机器真实状态对应 —— 不能'看起来在跑其实停了'"
+    framing: "所以它不是美术选择，而是'不能是暗算'这条纪律在【视觉层】的形态"
+    referenced_by: [visual-identity-surface]
