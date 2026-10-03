@@ -46,7 +46,7 @@
 | 10 | B4 氧气经济（无货币） | Economy | T1 | **Approved** | design/gdd/oxygen-economy.md | A3 |
 | 11 | B5 灾难与失控 | Gameplay | T1 | **Approved** | design/gdd/disasters-runaway.md | A6, A3 |
 | 12 | B6 储罐与容量 `(inferred)` | Gameplay | T1 | **Approved** | design/gdd/tanks-capacity.md | A1 |
-| 13 | B7 百科 | Gameplay | T1 | Not Started | — | A2, A3, A6, B3 |
+| 13 | B7 百科 | Gameplay | T1 | **In Design** | design/gdd/encyclopedia.md | A2, A3, A6, B3 |
 | 14 | B8 渐进解锁 | Progression | T2 | Not Started | — | B1, A6, B7 |
 | 15 | B9 工艺命名与工艺卡 | Progression | T2 | Not Started | — | A5, B7 |
 | 16 | B10 诊断与反馈 | UI | T1 | Not Started | — | B2, B5, A3 |
@@ -232,10 +232,10 @@
 | Metric | Count |
 |--------|-------|
 | Total systems identified | **29** |
-| Design docs started | **12** |
+| Design docs started | **13** |
 | Design docs reviewed | **12**（A1–A6 · B4 · B6 · B2 · B3 · B5 · B1，Verdict 均 APPROVED） |
 | Design docs approved | 0 |
-| **T1（垂直切片）系统已设计** | 12 / **16**（Core 段 11 个 + B1 均已评审 APPROVED） |
+| **T1（垂直切片）系统已设计** | 12 / **16**（Core 段 11 个 + B1 已评审 APPROVED；**B7 骨架已建、在设计**） |
 | **T2（MVP）系统已设计** | 0 / **7** |
 | **T3（完整愿景）系统已设计** | 0 / **6** |
 
