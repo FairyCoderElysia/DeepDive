@@ -112,6 +112,28 @@ formulas:
     determinism: "顺序由存档数据（优先级）决定，不需要随机种子 —— 比轮转+种子更强"
     referenced_by: [reaction-solver]
 
+  - name: contract_validation
+    description: 契约校验判定式 —— 两侧对同一份数据的解释结果必须与期望值一致。
+    expression: "对 schema 中每条字段声明 f：两侧解释结果(f) == 期望值(f)"
+    variables: [schema 字段声明, 两侧解释结果, 期望值]
+    output: "bool（且必须能指出【是哪一条】不符）"
+    truth_source: "schema 文件本身（YAML）—— 不让任何一侧的实现成为规范，否则生成器里的一个 bug 就变成了规范"
+    referenced_by: [schema-dual-interpreter]
+
+  - name: migration_chain
+    description: schema 版本迁移 —— 链式、显式、全成或全不成。
+    expression: |
+      vN -> vN+1  :=  [ 原语_1, 原语_2, ... ]      原语 in { add, remove, rename, transform }
+      add(field, default)      : 默认值【取自 schema 文件】
+      remove(field, where)     : 必须声明"信息去哪了"（丢弃 / 合并 / 先 transform）
+      rename                   : 用 add + 迁值 + remove 表达，不引入新机制
+      transform(field, fn)      : 必须带往返校验（有损变换不算通过）
+      一次升一级、不跳级；任一步失败 -> 拒绝载入 + 指出哪一步；不得写回中间态
+    variables: [schema_version, 字段级原语]
+    output: "迁移后的数据（或拒绝）"
+    danger: "remove 是最危险的原语 —— 若被删字段承载物质或状态，删掉就是丢信息（P2 边界，发生在时间维度上）"
+    referenced_by: [schema-dual-interpreter]
+
 constants:
 
   # ---------- 计量与口径 ----------
@@ -253,3 +275,16 @@ constants:
     note: "多台机器争同一池料的语义约定。A3 定义、A5 使用（A5 的图求值语义来自 A3）。"
     requirement: "优先级必须【可存档】（丢了等于玩家的创作丢了）且【可见】（不可解释的饥饿就是噪音）"
     referenced_by: [reaction-solver]
+
+  # ---------- A4 引入的常量 ----------
+
+  - name: MIGRATION_PRIMITIVES
+    value: [add, remove, rename, transform]
+    note: "迁移只允许用这四个原语，不引入别的。rename 由 add+迁值+remove 表达。"
+    referenced_by: [schema-dual-interpreter]
+
+  - name: VALIDATION_TRIGGER
+    value: "数据改动后 + 提交前"
+    note: "完整校验的触发时机（离线/开发期）。运行时只做轻量版本检查（版本不匹配则拒绝载入）。"
+    rationale: "完整校验的价值在于在开发者手上拦住错误，不在于在玩家机器上 —— 放运行时等于把开发期问题的代价推给玩家"
+    referenced_by: [schema-dual-interpreter]
