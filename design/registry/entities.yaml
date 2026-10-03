@@ -71,7 +71,7 @@ formulas:
       - "因此多旋钮合并最终落在单条记录上，配平校验作用在该记录的输出集合"
     quantization: "整数量化【归 A3】，且必须走 A1 的余数累加器；A2 只存系数"
     determinism: "确定性函数，不掷骰子 —— 可复现（与 A1 对抢料的 (b) 口径一致）"
-    referenced_by: [compound-reaction-data, reaction-solver]
+    referenced_by: [compound-reaction-data, reaction-solver, contaminants-failure-channels]
 
   - name: stoichiometry_balance_check
     description: 原子配平校验（A2 的导入期硬校验）。
@@ -224,6 +224,29 @@ formulas:
       也不让罐子做提纯（它不是分离器）—— 而是直接变成下游要解决的问题：要分开就走 B3。
       这条让"存贮"与"分离"接上：混装不是省事，而是把今天的方便变成明天的工序。
     referenced_by: [tanks-capacity]
+
+  - name: fouling_accumulation
+    description: 结垢的累积 —— 连续积分，绝不是按批。
+    expression: "积垢(t) = 积垢(t-1) + 速率(温度, 停留时间) × dt"
+    variables: [温度, 停留时间, dt, 积垢]
+    forbidden: "不得写成按批累加 —— 概念文档 Key Dynamics #8 的原措辞（'一批比一批低'）是批次语言，与 Core Mechanics #4 的警告冲突，以警告为准"
+    max_behavior: "积垢到 100% -> 失效停产；清洗（一段停机时间）后恢复 —— 可复原"
+    owner: "积垢跟着机器走；换机器能甩掉它，但换机器有实际代价（所以它是一个选择，不是退路）"
+    referenced_by: [contaminants-failure-channels]
+
+  - name: fouling_to_conversion
+    description: 积垢 -> 转化率 -> 未反应物（由此与"回流"咬住）。
+    expression: |
+      转化率 = f(积垢)                    ← 随积垢下降
+      未反应物 = 输入 × (1 - 转化率)        ← 这部分【必须被接住】（Key Dynamics #5）
+    variables: [积垢, 输入]
+    output: "转化率（随积垢下降）与未反应物"
+    critical_reading: |
+      概念文档原话是"糊住换热面 -> 转化率下降"，而"下降"有两读法：(a) 部分输入没被转化、
+      (b) 转化变慢。取 (a) —— 因为它才会产生"未反应物"这条额外物流。
+      由此【结垢与回流咬住】：结垢让未反应物变多 -> 玩家想回流 -> 而回流过量会稀释到不反应
+      （Key Dynamics #2 循环死锁）-> "清洗"与"回流比例"成为同一个决策的两面。
+    referenced_by: [contaminants-failure-channels]
 
 constants:
 
@@ -467,3 +490,29 @@ constants:
       【整个工厂会在玩家第一次存料时锁死】。这比"算错"严重得多。
     consequence: "存入/取出只是池内部的移动 -> 守恒自动成立；不需要改 A1 的公式"
     referenced_by: [tanks-capacity, element-pool]
+
+  # ---------- B2 引入的常量 ----------
+
+  - name: TWO_FAILURE_CHANNELS
+    value: "氯通道 = 组成问题；结垢通道 = 设备状态"
+    note: "两条通道【互补】的机制原因正是"表示方式不同"。"
+    why_complementary: |
+      一个攻击你的物质（物流里混进了别的东西，看得见、立刻发作、靠分离/存贮/销毁解决），
+      一个攻击你的设备（换热面上的积垢量，看不见物流、持续发作、靠清洗解决）。
+      它们攻击的是两样不同的东西，所以不可能被同一个办法解决。
+    easiest_mistake: |
+      把两者都实现成"一个污染值"（例如每台机器一个 0-100 的"脏度"）。
+      那会同时废掉两条通道的性格差异，而且会悄悄把"设备会老化"变成可以靠看物流发现的东西 ——
+      而它本来不该被发现（那正是"慢性"的来源）。
+    referenced_by: [contaminants-failure-channels]
+
+  - name: CHLORINE_IS_NOT_WASHABLE
+    value: "氯污染在【物流里】，不在设备上 -> 靠 B3 的分离解决，不是靠'洗设备'"
+    note: "由 TWO_FAILURE_CHANNELS 直接推出；也由 B4 的 ⑤ 表印证（需精制 -> 分离/存贮/销毁）。"
+    referenced_by: [contaminants-failure-channels]
+
+  - name: MAINTENANCE_IS_NOT_A_TIMER
+    value: "维护周期 ≠ 时间限制"
+    note: "概念文档原话：'结垢是"你自己的设备会老化，你要安排清理"，不是"有人在催你"'。"
+    feel_difference: "前者是【你在管理】，后者是【你在被追】—— 这个区别是手感上的"
+    referenced_by: [contaminants-failure-channels]
