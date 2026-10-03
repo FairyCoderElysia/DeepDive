@@ -48,7 +48,7 @@
 | 12 | B6 储罐与容量 `(inferred)` | Gameplay | T1 | **Approved** | design/gdd/tanks-capacity.md | A1 |
 | 13 | B7 百科 | Gameplay | T1 | **Approved** | design/gdd/encyclopedia.md | A2, A3, A6, B3 |
 | 14 | B8 渐进解锁 | Progression | T2 | **Approved** | design/gdd/progressive-unlock.md | B1, A6, B7 |
-| 15 | B9 工艺命名与工艺卡 | Progression | T2 | Not Started | — | A5, B7 |
+| 15 | B9 工艺命名与工艺卡 | Progression | T2 | **In Design** | design/gdd/process-naming-cards.md | A5, B7 |
 | 16 | B10 诊断与反馈 | UI | T1 | **Approved** | design/gdd/diagnosis-feedback.md | B2, B5, A3 |
 | 17 | B11 HUD / UI `(inferred)` | UI | T1 | **Approved** | design/gdd/hud-ui.md | B10, B3, B4, A6 |
 | 18 | B12 热力图主图层 | UI | T2 | **Approved** | design/gdd/heatmap-base-layer.md | A5, B4, B2 |
@@ -232,7 +232,7 @@
 | Metric | Count |
 |--------|-------|
 | Total systems identified | **29** |
-| Design docs started | **24** |
+| Design docs started | **25** |
 | Design docs reviewed | **24**（Core 11 + Feature 8 + B10 · B11 · B12 · B13 · B14，Verdict 均 APPROVED） |
 | Design docs approved | 0 |
 | **T1（垂直切片）系统已设计** | 🎉 **16 / 16**（**全部已评审 APPROVED**） |
