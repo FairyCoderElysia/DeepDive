@@ -61,7 +61,7 @@
 | 25 | B19 性能预算与管网 tick | Technical | T1 | Not Started | — | A5 |
 | 26 | C1 深度分层与通量阶梯 | World | T3 | **Approved** | design/gdd/depth-layers.md | A5, B4 |
 | 27 | C2 矿脉与开采 | World | T3 | **Approved** | design/gdd/ore-veins.md | C1, A1 |
-| 28 | C3 飞船与零件 | World | T3 | **In Design** | design/gdd/ship-and-parts.md | A5, A3, C2 |
+| 28 | C3 飞船与零件 | World | T3 | **Approved** | design/gdd/ship-and-parts.md | A5, A3, C2 |
 | 29 | C4 程序生成 | World | T3 | Not Started | — | C1, C2 |
 
 > **编号说明**：A/B/C 前缀保留枚举阶段的模块分组，便于与评审对话对照；`B10`–`B19` 是原先的 D/E 组，
@@ -233,7 +233,7 @@
 |--------|-------|
 | Total systems identified | **29** |
 | Design docs started | **17** |
-| Design docs reviewed | **16**（Core 段 11 个 + B1 · B7 · B8 · C1 · C2，Verdict 均 APPROVED） |
+| Design docs reviewed | **17**（Core 段 11 个 + B1 · B7 · B8 · C1 · C2 · C3，Verdict 均 APPROVED） |
 | Design docs approved | 0 |
 | **T1（垂直切片）系统已设计** | 13 / **16**（Core 段 11 个 + B1 · B7 已评审 APPROVED；**C1 的「表层通量天花板」是 T1 义务**，已评审并写进 depth-layers.md） |
 | **T2（MVP）系统已设计** | 0 / **7** |
