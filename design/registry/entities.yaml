@@ -316,6 +316,43 @@ formulas:
     use: "这是 B1 验收第 1 条的依据 —— 若两种接法结果相同，那它就不是决策"
     referenced_by: [connection-decisions]
 
+  - name: depth_effects
+    description: 深度四个单调函数（带宽 / 速度 / 管壁许用通量 / 耗氧）—— 具体形状待定。
+    expression: |
+      带宽上限(d)   = 单调下降(d)
+      速度(d)       = 单调下降(d)        ← 与①是【两个量】，不可合并成一个系数
+      许用通量(d)   = 单调下降(d)
+      耗氧(d)       = 单调上升(d)        ← 趋势归 B4，关系属 C1
+    variables: [depth]
+    bandwidth_vs_speed: |
+      Core Mechanics #4 说"带宽越低"，用户的原始确认说"决定物流速度" —— 两个词指的是两个量：
+      带宽 = 吞吐上限（影响"你能造多大"）· 速度 = 延迟（影响"你等多久看到结果"）。
+      若合并成一个系数，"通量阶梯"会少掉一半：速度降只是"慢"，只有带宽降才是"造不大"。
+    referenced_by: [depth-layers]
+
+  - name: wall_limit_break
+    description: 管壁超限破裂 —— 确定性，不是概率。
+    expression: "若 实际通量 > 许用通量(depth)  ->  破"
+    variables: [实际通量, 许用通量, depth]
+    determinism: |
+      两条已定纪律同时排除概率：B5 的"同存档+同操作序列 -> 灾难必然复现"（P2 的底线"不是运气"）
+      与失败模式表的"必须可诊断，不能是暗算"。
+      -> 玩家永远可以算出来"这段管在这个深度最多能过多少"。
+    not_a_disaster: |
+      它是【环境超限】导致的机械失效；B5 的灾难是【化学反应失控】（失控放热/燃烧/爆炸）。
+      两者都会让产线停下、也都可能被旁通绕过，但原因链完全不同 -> B10 必须能分辨它们。
+    referenced_by: [depth-layers]
+
+  - name: surface_flux_ceiling
+    description: 表层通量天花板 —— 【T1 的义务】，不是 T3 的。
+    expression: "海水提取的通量上限（固定） -> 靠海水永远无法把产能放大到后期规模"
+    source: "概念文档 Risk #8（line 424）"
+    why: |
+      "「深海是必须项」在 MVP 里完全不成立" —— MVP 只在最浅层。
+      计划：从 T1 垂直切片起就必须把"表层通量天花板"做出来（让玩家真的感到海水不够用），
+      否则"必须下潜"在体感上不存在，P4 会退化成一句设定。
+    referenced_by: [depth-layers]
+
 constants:
 
   # ---------- 计量与口径 ----------
@@ -789,3 +826,42 @@ constants:
       若不这样，提前碰见氯污染的玩家会面对一个无法回答的问题
       （"氯是从哪来的"却无旋钮可用）—— 那直接违背"旋钮在疑问出现时出现"这条原则。
     referenced_by: [progressive-unlock]
+
+  # ---------- C1 引入的常量 ----------
+
+  - name: DEPTH_IS_A_1D_AXIS
+    value: "深度是一条【一维轴】—— 节点/边有一个 depth 属性，玩家也有一个 depth（'下潜'=沿轴移动）"
+    note: "本作没有 tile 空间模型（Core Mechanics #4：节点+边的逻辑图）。"
+    presentation_split: "2.5D 分层视差是这条轴的【呈现（B14）】，不是它的机制"
+    sibling_finding: |
+      它与 B5 的 F-B5-1 是同一个形状：那次是"连锁不能走空间"，这次是"深度不是空间位置"。
+      同一根源：本作没有空间模型，但机制语言里到处是空间词（旁边、深处、下潜）。
+    danger: "若不写清，实现者会去找一个二维/三维世界模型，然后发现逻辑管网里没有位置可言"
+    referenced_by: [depth-layers]
+
+  - name: DEPTH_IS_CONTINUOUS
+    value: "深度函数【连续】，而 S1→S4 是【命名】分 4 段（不是数值台阶）"
+    source: "借镜泰拉瑞亚那条（'深度不是生物群系，是压强与带宽的连续函数'）+ Content Volume（'深度分层 4 段'）"
+    why_both_true: "函数连续（可无限细分）+ 有底给了可达终点 -> S1→S4 是'读到哪'的命名，不是'跳到哪'的台阶"
+    b14_requirement: "B14 的契约明写'不得假设深度是离散段（那样画面会跳变）'"
+    referenced_by: [depth-layers]
+
+  - name: TANK_CAPACITY_INDEPENDENT_OF_DEPTH
+    value: "罐容【不】随深度变化"
+    note: "回答 B3 留给 C1 的遗留问题（B3 的 §Open Questions 写着'罐容是否随深度变化，倾向不变，需与 C1 对齐'）。"
+    reasoning: "罐子是玩家造的物件；深度影响的是【物流】，不是罐容。"
+    referenced_by: [depth-layers, tanks-capacity]
+
+  - name: FORCED_DIVE
+    value: "海水无限但【低通量】；矿脉【高密度但高代价】；存在【仅矿脉可得】的元素"
+    note: "所以深度不只是地理阶梯，更是【通量阶梯】：靠海水永远无法把产能放大到后期规模。"
+    design_test: "争'让玩家靠海水无限放大产能' vs '让大规模产能必须下潜' -> 选下潜"
+    two_ceilings: "① 元素种类天花板（缺了仅矿脉可得的元素，某类产物结构上做不出来）· ② 速率天花板（海水低通量）"
+    referenced_by: [depth-layers]
+
+  - name: TWO_PRESSURES_SEPARATION
+    value: "(A) 压强作为工艺参数 P（MVP 就有，属 A1/A6）· (B) 深度带来的环境压强（T3，属 C1）"
+    source: "概念文档 2026-10-02 的拆分"
+    history: "概念文档自己承认：'本文件先前把这两件事混为一谈…现已分开'。"
+    consequence: "C1 只管 (B) —— 这一条必须写进边界，因为概念文档自己在这上面犯过一次错"
+    referenced_by: [depth-layers]
