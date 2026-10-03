@@ -23,6 +23,7 @@ extends Control
 
 const TABLE: CompoundData = preload("res://data/reactions.tres")
 const SOLVER := preload("res://scripts/reaction_solver.gd")
+const GRAPH := preload("res://scripts/process_graph.gd")
 
 const WATER := {&"H": 2, &"O": 1}
 
@@ -41,6 +42,7 @@ const RUN_TICKS := 100
 
 var _pool := ElementPool.new()
 var _solver = SOLVER.new()
+var _graph = GRAPH.new()
 var _compounds: Dictionary = {}
 var _widgets := {}
 var _tick := 0
@@ -49,6 +51,12 @@ var _temp := 45.0
 
 func _ready() -> void:
 	_build_ui()
+	# ★ T1 的图：**一个节点**（将来加机器只需在这里多 add_node + add_edge）
+	_graph.add_node({
+		"id": &"electrolyzer", "priority": 0,
+		"branches": TABLE.steps_for({CompoundData.composition_key(WATER): 2}),
+		"conditions": {&"param_temperature": _temp},
+	})
 	# 定步长：P2 要求"同存档 + 同操作序列 → 结果必然复现"，所以绝不跟随帧间隔
 	var timer := Timer.new()
 	timer.wait_time = 1.0 / TICK_HZ
@@ -93,24 +101,14 @@ func _step() -> void:
 
 ## ★ 本版的核心：反应完全由 A2 的数据决定
 func _run_reaction(batches: int) -> void:
-	var water_key := CompoundData.composition_key(WATER)
+	# ★ 走 A5：把本切片当作一张【单节点图】来求值。
+	#   单节点图上 A5 的语义与"直接调 A3"逐位相同 —— 见 process_graph_test 里那条证据。
+	#   将来加机器只需 add_node + add_edge，本函数不用改。
+	_graph.node(&"electrolyzer")["conditions"] = {&"param_temperature": _temp}
+	var g_r: Dictionary = _graph.evaluate(_compounds, TABLE, _solver)
+	var by_node: Array = (g_r["results"] as Dictionary).get(&"electrolyzer", [])
 
-	# ★ **分支判定归 A3**（A3 的 ④：调 A2 的判据，不重新定义条件语义）——
-	#   所以场景只把【候选】交进去，**不自己挑**。
-	#   （上一版这里有一份重复的分支挑选逻辑；A3 补上 ④ 之后它就成了重复 —— 已删。）
-	var branches := TABLE.steps_for({water_key: 2})
-	if branches.is_empty():
-		return
-	var machine := {
-		"id": &"electrolyzer",
-		"priority": 0,
-		"branches": branches,                 # ← A3 会按当前温度选一条
-		"conditions": {&"param_temperature": _temp},
-	}
-	# A3 的 solve 是【纯】的；化合物账就是它读的 available
-	var r: Dictionary = _solver.solve([machine], _compounds, TABLE)
-
-	for res: Dictionary in r["results"]:
+	for res: Dictionary in by_node:
 		var took: Dictionary = res.get("took", {})
 		var made: Dictionary = res.get("made", {})
 		if took.is_empty() and made.is_empty():
@@ -132,7 +130,7 @@ func _run_reaction(batches: int) -> void:
 		assert(_pool.add_formula(out_atoms), "刚取出来的原子必须放得回去")
 
 		# ② 化合物账：应用 A3 的结果（**唯一的副作用点是显式的 apply**）
-		SOLVER.apply(res, _compounds)
+	# ⚠️ 这里【不】再 apply —— A5 的 evaluate() 内部已经应用过了（上一版双重应用 -> 账跑成负数）
 
 		# ③ 灾难：A3 只标记，后果与连锁归 B5（本切片只告警）
 		if String(res.get("disaster", "")) != "":
