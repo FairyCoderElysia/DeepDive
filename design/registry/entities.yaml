@@ -485,6 +485,32 @@ formulas:
     forbidden: "看起来在跑、其实停了 —— 那正是'暗算'的视觉版本"
     referenced_by: [visual-identity-surface]
 
+  - name: depth_visual_dimensions
+    description: 深度的四个视觉维度（都是深度的连续函数）。
+    expression: |
+      明度(d)     = 单调下降(d)      ← 越深越暗
+      可见范围(d) = 单调收窄(d)      ← 视野收窄 + 视差层减少
+      色偏(d)     = 蓝 -> 近黑(d)    ← 且它是【基底的色温偏置】
+      噪点(d)     = 单调上升(d)
+    relation_to_c1: |
+      它们不是新东西 —— 与 C1 的 depth_effects（带宽/速度/许用通量/耗氧）是同一条轴上的
+      两套函数（一套给机制、一套给画面）。B14 不得重定义 C1 的函数，只借用连续值。
+    referenced_by: [visual-identity-depth]
+
+  - name: depth_heatmap_composition
+    description: 深度色偏与热力图的组合式（不是覆盖）。
+    expression: |
+      热力图映射(读数) = 色温映射(读数, 范围 = [冷端(d), 暖端(d)])
+                                          ↑ 范围本身被深度整体推向冷端
+      明度 仍归深度（§2②"照度不变"）
+    why_not_priority: |
+      §2② 写着"场景照度【不变】，但叠加层接管颜色" —— "照度不变"＝明度不动
+      -> 热力图只管色相/色温，明度归深度。
+      但 §2⑥ 的"色偏（蓝->近黑）"也在色温轴上 -> 两者确实会撞。
+      "谁优先"总有一方要在玩家最需要它的时候消失；而玩家恰恰最可能在深处开热力图
+      （深处更贵、更想知道哪里不对）-> 所以选【组合】。
+    referenced_by: [visual-identity-depth]
+
 constants:
 
   # ---------- 计量与口径 ----------
@@ -1317,3 +1343,33 @@ constants:
     discipline: "自发光必须与机器真实状态对应 —— 不能'看起来在跑其实停了'"
     framing: "所以它不是美术选择，而是'不能是暗算'这条纪律在【视觉层】的形态"
     referenced_by: [visual-identity-surface]
+
+  # ---------- B14 引入的常量 ----------
+
+  - name: DEPTH_VISUAL_JUDGMENT
+    value: "判据：不看数字就知道自己下去了"
+    nature: "这是一个【关于画面的测试】（画面单独是否够用），不是【对数字的禁令】"
+    supporting_evidence: |
+      ① 泰拉瑞亚那条被引用的正是"分层命名 + 常驻深度读数"验证了"分层手感可以被玩家直觉理解"；
+      ② C1 有 4 段命名（S1→S4），需要一个地方显示它。
+      -> 常驻读数要有，但测试仍按"不看数字"来做：读数不是玩家判断"我在哪"的唯一手段。
+    source: "概念文档 line 359"
+    referenced_by: [visual-identity-depth]
+
+  - name: NARROW_MEANS_VISIBLE_RANGE
+    value: "'越深越窄' = 可见范围变小（视野收窄 + 视差层减少）"
+    forced_by_exclusion: |
+      art-bible 明确排除等轴测（"它会压缩纵轴，直接摧毁'深度'这个机制"）-> "窄"不能靠透视。
+      而 2D 侧视 + 分层视差是已定的 -> 手段就是视野收窄（两侧压暗/遮挡）+ 视差层减少
+      （用的是 art-bible 资产清单里的"分层背景"）。
+    referenced_by: [visual-identity-depth]
+
+  - name: DEPTH_VISUAL_CLAIM_STANDS_NOW
+    value: "它的视觉主张现在就要立（虽然下潜属 T3）"
+    source: "art-bible §2：'「下潜」属 T3，但 §1 的原则②（深度即可见压力）就建立在它身上'"
+    referenced_by: [visual-identity-depth]
+
+  - name: NO_FOUR_DIM_SHARED_NORMALIZATION_YET
+    value: "(待定) 四条曲线是否共享同一个归一化 —— 否则会出现'很暗但不冷'"
+    note: "已列入 Open Questions。不共享会让四维各自到达极值的时机不同，体感会散。"
+    referenced_by: [visual-identity-depth]
