@@ -258,3 +258,45 @@ func test_a3_reports_disaster_when_all_branches_are_out_of_bounds() -> void:
 			  "conditions": {&"param_temperature": 500.0}}
 	var r = RS.new().solve([m], {W: 10}, t)
 	assert_str(String((r["results"][0] as Dictionary)["disaster"])).is_not_equal("")
+
+
+# ============================================================ 集成才暴露的两处缺陷（回归测试）
+
+## ★ 回归：**层内公平分配必须收敛** —— 三台及以上机器时也不例外。
+##
+## 旧实现的式子是 `a_m ← a_m × avail_i / Σ(req × a_m)`，而分母与 a_m 同比缩放
+## ⇒ `a_m / total_i` 是不变量 ⇒ **根本不收敛**：三台机器时每 tick 都打到上限并告警。
+## 现在用它的闭式解，所以 `warned` 必须是 false。
+func test_fair_share_converges_with_three_or_more_machines() -> void:
+	var t := _table()
+	var s := _water_step("m")
+	var machines := [_machine("a", s), _machine("b", s), _machine("c", s), _machine("d", s)]
+	var r = RS.new().solve(machines, {_H2(): 8, _O2(): 4}, t)
+	assert_bool(bool(r["warned"])).is_false()
+	for res: Dictionary in r["results"]:
+		assert_int(int(res["advanced_scaled"])).is_greater(0)
+
+
+## ★ 回归：**分支型机器（只有 branches、没有 step）也要能算对**
+##
+## `_single_machine_bound` 曾直接读 `m["step"]` —— 分支型机器没有这个键，
+## 于是上界算成 0 ⇒ 所有机器 adv=0、band=idle ⇒ **反应全停**。
+## （这是"改一处取值方式时把所有读同一字段的地方一起改"那条教训的第三次。）
+func test_branch_only_machine_gets_a_nonzero_bound() -> void:
+	var t := _table()
+	var W := _H2O()
+	var low := _step("low_T", {W: 2}, {W: 2})
+	low["conditions"][0]["opt_lo"] = 40.0; low["conditions"][0]["opt_hi"] = 60.0
+	low["conditions"][0]["brk_lo"] = 20.0; low["conditions"][0]["brk_hi"] = 60.0
+	var high := _electrolysis_step("high_T")
+	high["conditions"][0]["opt_lo"] = 60.0; high["conditions"][0]["opt_hi"] = 110.0
+	high["conditions"][0]["brk_lo"] = 60.0; high["conditions"][0]["brk_hi"] = 140.0
+
+	# ⚠️ 这台机器【没有 step】，只有 branches
+	var m := {"id": &"m", "priority": 0, "branches": [low, high],
+			  "conditions": {&"param_temperature": 80.0}}
+	var r = RS.new().solve([m], {W: 6}, t)
+	var res: Dictionary = r["results"][0]
+	assert_bool(int(res["advanced_scaled"]) > 0).is_true()      # 上界不是 0
+	assert_str(String(res["band"])).is_not_equal("idle")
+	assert_bool((res["made"] as Dictionary).has(_H2())).is_true()
