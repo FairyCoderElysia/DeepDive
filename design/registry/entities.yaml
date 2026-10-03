@@ -392,6 +392,29 @@ formulas:
     playability: "玩家在设计时就能算'我这船飞不飞得起来'—— 然后决定要不要继续投入"
     referenced_by: [ship-and-parts]
 
+  - name: starting_reachability
+    description: 可通达性判定 —— 四条生成约束里最关键的一条，也是"公平开局"的落点。
+    expression: "开局可通达 <=> 存在一条从起步条件出发、只用开局可得元素就能跑通的起步链"
+    why: "它保证'公平开局'不是一句口号 —— 也保证不会出现'这局运气不好'"
+    referenced_by: [procedural-generation]
+
+  - name: seed_to_world
+    description: 种子 -> 世界的确定性映射。
+    expression: "世界 = 生成算法(种子, 版本)"
+    consequence: |
+      "种子 + 生成算法 = 世界" -> 不必存整个世界；
+      但生成算法一变，老存档就回不到原来的世界 -> 版本必须与存档一起存。
+      这与 A1 的"元素表 schema 必须版本化"、A4 的"schema 内容指纹"是同一条纪律。
+    referenced_by: [procedural-generation]
+
+  - name: randomization_scope
+    description: 随机化的范围 —— 可变与不可变的清单。
+    expression: |
+      可变：  矿脉在轴上的位置 / 丰度 / 数量 ；各分层分段的长短（分层权重）
+      不可变：函数形状（C1）· 元素集（Risk #9 的全局清单）· 四条约束本身
+    hard_boundary: "它可以改【东西在哪】，不可以改【东西是什么】"
+    referenced_by: [procedural-generation]
+
 constants:
 
   # ---------- 计量与口径 ----------
@@ -995,3 +1018,37 @@ constants:
     source: "概念文档 line 254"
     consequence: "其它所有系统都【不得】依赖 '玩家会造飞船' 这个假设"
     referenced_by: [ship-and-parts]
+
+  # ---------- C4 引入的常量 ----------
+
+  - name: ELEMENT_BUDGET_RANGE
+    value: "元素预算 = 基准值 × (1 ± 30%)"
+    source: "概念文档 line 409"
+    note: "改动它等于改'公平'的定义。"
+    referenced_by: [procedural-generation]
+
+  - name: FOUR_GENERATION_CONSTRAINTS
+    value: [公平开局, 元素预算 ±30%, 可通达, 分层权重]
+    note: "概念文档'半程序生成'的四条约束 —— 它们是'半'字的具体内容。"
+    why_half: "随机性被用来制造【不同的开局】，而不是制造【不公平】"
+    referenced_by: [procedural-generation]
+
+  - name: SPATIAL_WORD_TRANSLATION_RULE
+    value: "凡出现空间词，先问'它在模型里对应什么'，再写实现"
+    established_by: |
+      本项目【第三次】遇到"机制语言里有空间词、而模型里没有空间"：
+      B5 的"旁边爆了" -> 连锁只能沿图的边（F-B5-1）
+      C1 的"越深"     -> 深度是一条一维轴（F-C1-1）
+      C4 的"随机化布局" -> 一条轴上的分布
+    root_cause: "设计语言借用了玩家熟悉的物理隐喻，而实现模型是【逻辑图 + 一维轴】"
+    danger: "若不翻译，实现者会去找一个二维/三维世界模型（前两次的教训已证明那条路是死的）"
+    referenced_by: [procedural-generation, depth-layers, disasters-runaway]
+
+  - name: NO_RANDOMIZING_THE_ELEMENT_SET
+    value: "元素集【绝不能】随机化 —— 随机化只改「东西在哪」，不改「东西是什么」"
+    three_reasons: |
+      ① 知识不可迁移：玩家学到的化学在某局成立、在另一局不成立 ->
+         那会把"学习真化学"变成"学习这一局的假化学"，而 P2 的整个卖点就是真化学；
+      ② 与 Risk #9 冲突：那份"仅矿脉可得"的清单是【全局】的（判据不随局变）；
+      ③ 它会让 B7 的百科失效：百科装的是【事实】，而事实不该随局变。
+    referenced_by: [procedural-generation]
