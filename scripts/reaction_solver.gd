@@ -20,6 +20,17 @@ extends RefCounted
 ## 迭代上限（用户拍板：迭代到不动点，带上限）
 const MAX_ITERATIONS := 8
 
+## ★ A3 的 ③：**整数量化必须走 A1 那套放大整数机制** —— 而不是 floor 之后把余数丢掉。
+## 结构：machine_id -> { 化合物 key -> 「化合物数 × SCALE」的余数 }
+##
+## 为什么必须有它（这是集成三台机器之后才查明的、**违反 P2** 的缺陷）：
+##   裸 floor 是**逐化合物**取整的，而 A2 的步骤是【整份】配平的 ——
+##   于是 `inputs={水:1.4×SCALE}` 扣 1 个水（3 原子），
+##   而 `outputs={H2:1.4×SCALE, O2:0.7×SCALE}` 只给 1 个 H₂（2 原子）⇒ **氧被丢了**。
+##   （探针实测：正是这样。所以"缺陷 1 与缺陷 2"其实是同一个病。）
+##   -> 累加器让每个化合物**最终交付它精确的份额**，误差因此**有界且不漂移**（A1 的同一条纪律）。
+var _carry: Dictionary = {}
+
 ## 同层内机器多于这个数时，仍然全部处理 —— 但顺序必须【稳定】（见 ⑥）
 const AVAILABLE_KEY_ZERO := 0
 
@@ -177,20 +188,30 @@ func _commit_one(m: Dictionary, advance: float, avail: Dictionary, table: Compou
 
 	# ③ 整数量化：先按 A2 折出放大整数的收支，再取整数部分
 	var r: Dictionary = table.resolve_scaled(step, conditions, adv_scaled)
+	# ★ **逐化合物累加**：把缩放后的量加进余数 -> 取整数部分 -> **余数留下**
+	#   （A3 的 ③：走 A1 的那套放大整数机制；而不是 floor 之后把余数丢掉。）
+	var mid: StringName = m["id"]
+	if not _carry.has(mid):
+		_carry[mid] = {}
+	var car: Dictionary = _carry[mid]
 	var took := {}
 	var made := {}
 	var carried := false
 	for k: String in (r["inputs"] as Dictionary):
-		var whole: int = int(r["inputs"][k]) / scale
+		var acc := int(car.get(k, 0)) + int(r["inputs"][k])
+		var whole := acc / scale
+		car[k] = acc - whole * scale
 		if whole <= 0:
 			continue
 		if int(avail.get(k, 0)) < whole:
-			# 理论上不该发生（上面已按可用量限制了推进量）；取整误差时少扣，余量进累加器不丢
+			# 理论上不该发生（上面已按可用量限制了推进量）；保守少扣，余数已留在累加器里
 			carried = true
 			continue
 		took[k] = whole
 	for k: String in (r["outputs"] as Dictionary):
-		var whole2: int = int(r["outputs"][k]) / scale
+		var acc2 := int(car.get(k, 0)) + int(r["outputs"][k])
+		var whole2 := acc2 / scale
+		car[k] = acc2 - whole2 * scale
 		if whole2 <= 0:
 			continue
 		made[k] = whole2
@@ -252,6 +273,12 @@ func _empty_result(m: Dictionary) -> Dictionary:
 	return {"id": m["id"], "advanced_scaled": 0, "took": {}, "made": {},
 			"band": "idle", "disaster": "", "carried_remainder": false,
 			"priority": int(m.get("priority", 0))}
+
+
+## 某台机器对某个化合物的当前余数（单位：化合物数 × SCALE）。
+## **它不计入任何总量** —— 只是"还差多少凑够一个"，不是物质（与 A1 的累加器同一条纪律）。
+func carry_of(machine_id: StringName, key: String) -> int:
+	return int((_carry.get(machine_id, {}) as Dictionary).get(key, 0))
 
 
 # ---------------------------------------------------------------- 内部
