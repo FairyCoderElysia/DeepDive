@@ -234,6 +234,7 @@
 | Total systems identified | **29** |
 | Design docs started | **26** |
 | Design docs reviewed | 🎉 **26**（**全部已设计系统，Verdict 均 APPROVED**） |
+| **跨 GDD 整体评审** | ✅ **已跑**（2026-10-02）—— `design/gdd/gdd-cross-review-2026-10-02.md`；修掉 6 处、记下 3 次自查误报 |
 | Design docs approved | 0 |
 | **T1（垂直切片）系统已设计** | 🎉 **16 / 16**（**全部已评审 APPROVED**） |
 | **T2（MVP）系统已设计** | 0 / **7** |
