@@ -44,7 +44,7 @@ formulas:
     output: "n 个整数原子；r ∈ [0, SCALE)"
     error_bound: "池相对理想连续模型的偏差 < 机器数 × 元素种数 个原子（有界，不漂移）"
     physical_reading: "累加器就是「反应器里还没反应完的那部分」—— 不是数值补丁"
-    referenced_by: [element-pool]
+    referenced_by: [element-pool, reaction-solver]
 
   - name: conservation_predicate
     description: 整数守恒判定。**判定走整数比较，无浮点容差。**
@@ -52,7 +52,7 @@ formulas:
     variables: [T_start, T_end, 净导入]
     output: "bool"
     exclusion: "累加器里的小数部分（r 本身）**不计入**原子总量 —— 它还不是一个完整原子。此条不写明，实现者会算进去、然后每 tick 都假失败（T0 曾误报 32 次假不守恒，同一类错误）。"
-    referenced_by: [element-pool]
+    referenced_by: [element-pool, reaction-solver]
 
   - name: offset_to_branch_ratio
     description: 条件偏移 → 走向哪一支、各出多少（A2 的核心公式）。
@@ -71,7 +71,7 @@ formulas:
       - "因此多旋钮合并最终落在单条记录上，配平校验作用在该记录的输出集合"
     quantization: "整数量化【归 A3】，且必须走 A1 的余数累加器；A2 只存系数"
     determinism: "确定性函数，不掷骰子 —— 可复现（与 A1 对抢料的 (b) 口径一致）"
-    referenced_by: [compound-reaction-data]
+    referenced_by: [compound-reaction-data, reaction-solver]
 
   - name: stoichiometry_balance_check
     description: 原子配平校验（A2 的导入期硬校验）。
@@ -82,6 +82,36 @@ formulas:
     on_failure: "拒绝导入整表 + 指出是哪一条（与 A1 的'拒绝整表'同一条纪律）"
     referenced_by: [compound-reaction-data]
 
+  - name: limiting_reagent_progress
+    description: 限制试剂与实际推进量（A2 明确把"限制试剂"交给 A3）。
+    expression: |
+      可推进份数 = min over 输入项 i ( 可用量_i / 需求量_i )
+      推进       = 可推进份数   （分数；整数部分立即搬运，小数部分进累加器）
+    variables: [可用量_i, 需求量_i]
+    output: "推进份数（分数，由 A1 的余数累加器整数量化）"
+    meaning: "比值最小的那一项决定推进 —— 这就是'谁先耗尽'"
+    referenced_by: [reaction-solver]
+
+  - name: priority_tier_allocation
+    description: 层内分配 —— 抢料的语义（A3 定义、A5 使用）。
+    expression: |
+      【层间】按优先级从高到低依次取料 —— 抢料只发生在层间
+      【层内】按各机器的"当前实际需求_i"比例，把池中剩余可用量分给层内各机器
+              然后 迭代到不动点（带上限）：
+                算每机 min(分到量_i / 需求_i) -> 若推进量不再变化则稳定退出
+                否则把"因其他输入受限而用不到的份额"释放回池、重新分配
+    variables: [优先级, 当前实际需求_i]
+    output: "每台机器本 tick 的推进量"
+    why_iterate: |
+      用"初始需求"分一趟会把用不到的料锁死。例：两台机器各要 2H+1O，池里只有 2H、100O ->
+      H 是瓶颈、两台各只能推进 0.5 份，但按初始需求比例分会各分到 50 个 O（实际只需 0.5）->
+      99 个 O 被锁住、饿死只要 O 的第三台机器。玩家会认为系统算错了，而它确实错了一半。
+    conventions:
+      - "同优先级 = 按需求比例等分（公平）；不同优先级 = 抢（玩家可配）—— 两层语义各司其职"
+      - "等分必须【层内联立】，不能逐台分配 —— 逐台分配会让结果依赖处理顺序，违反确定性"
+    determinism: "顺序由存档数据（优先级）决定，不需要随机种子 —— 比轮转+种子更强"
+    referenced_by: [reaction-solver]
+
 constants:
 
   # ---------- 计量与口径 ----------
@@ -90,7 +120,7 @@ constants:
     value: 1048576            # 2^20
     unit: "放大倍数（无量纲）"
     note: "余数累加器的放大倍数。调小会让低速机器更迟钝；调大无收益。"
-    referenced_by: [element-pool]
+    referenced_by: [element-pool, reaction-solver]
 
   - name: ATOMS_PER_SEA_UNIT
     value: 1000
@@ -109,7 +139,7 @@ constants:
     value: "万级原子 / tick"
     note: "A1 的设计基准，交 B19（性能预算与管网 tick）当第一个性能预算。由规模（大工厂 1000 份/秒）× 实测成本（整数数组遍历 ≈32 ns/次）推出：16,700 原子全池扫一遍 ≈ 0.54 ms。"
     assumption: "⚠️ 大工厂量级 1000 份/秒【是假设，不是实测】—— 取决于飞船规模与玩家基地体量，两者均未定；若错一个数量级，B19 的预算全错一个数量级。"
-    referenced_by: [element-pool, systems-index]
+    referenced_by: [element-pool, systems-index, reaction-solver]
 
   # ---------- 海水 8 元素的原子量（导入换算的唯一权威来源）----------
 
@@ -167,31 +197,31 @@ constants:
     value: { min: 20, max: 200, default: 80 }
     unit: "°C"
     note: "温度 T。范围来自 T0 实测（每个旋钮都已验过存在内部最优，非单调）。默认值【暂从 T0 继承】，正式值应在 T1 按手感重调。"
-    referenced_by: [element-pool, compound-reaction-data]
+    referenced_by: [element-pool, compound-reaction-data, reaction-solver]
 
   - name: param_pressure
     value: { min: 1, max: 40, default: 6 }
     unit: "atm"
     note: "压强 P。⚠️ 注意与「深度带来的压强」区分：那属 C1（T3），本旋钮是反应器的一个工艺参数（MVP 即有）。"
-    referenced_by: [element-pool, compound-reaction-data]
+    referenced_by: [element-pool, compound-reaction-data, reaction-solver]
 
   - name: param_residence_time
     value: { min: 0.5, max: 15, default: 4.0 }
     unit: "相对"
     note: "停留时间 τ。"
-    referenced_by: [element-pool, compound-reaction-data]
+    referenced_by: [element-pool, compound-reaction-data, reaction-solver]
 
   - name: param_catalyst
     value: { options: [无催化剂, 镍网, 铂片], default: 铂片 }
     unit: "枚举 3"
     note: "催化剂。"
-    referenced_by: [element-pool, compound-reaction-data]
+    referenced_by: [element-pool, compound-reaction-data, reaction-solver]
 
   - name: param_anode_material
     value: { options: [石墨阳极, 钌铱涂层钛_析氯型, 铱钽涂层钛_析氧型], default: 铱钽涂层钛_析氧型 }
     unit: "枚举 3"
     note: "阳极材料。**它存在的唯一理由是氯污染通道** —— 若砍掉 Cl 通道，本旋钮会变成死重、参数表必须退回 4 个。"
-    referenced_by: [element-pool, compound-reaction-data]
+    referenced_by: [element-pool, compound-reaction-data, reaction-solver]
 
   # ---------- A2 引入的常量 ----------
 
@@ -200,10 +230,26 @@ constants:
     status: "暂定"
     note: "T1 垂直切片的表规模。依据：海水只有 8 元素、4 分类组；T1 只需覆盖海水->起步物资链 + 6 操作原语 + 两条失败通道（Cl 污染 / 结垢）。T3 完整愿景约 100–150 个化合物。"
     key_point: "丰富度来自【步骤的组合数】而非表的条目数 —— 一个 40 条的步骤表可支撑远超 40 条路径。"
-    referenced_by: [compound-reaction-data]
+    referenced_by: [compound-reaction-data, reaction-solver]
 
   - name: CONDITION_BAND_CONVENTION
     value: "[a, b) 左闭右开"
     note: "条件区间的取法约定（最优带 / 偏移带 / 越界三段均适用）。避免同一点同时属于两段。"
     companion_rule: "同一输入的各分支区间必须不重叠、不留缝 —— 否则出现'平局'或'无人区'（导入期校验）"
-    referenced_by: [compound-reaction-data]
+    referenced_by: [compound-reaction-data, reaction-solver]
+
+  # ---------- A3 引入的常量 ----------
+
+  - name: SOLVER_FIXPOINT_ITERATION_CAP
+    value: 8
+    unit: "轮"
+    status: "暂定"
+    note: "层内分配的不动点迭代上限。达到上限仍未稳定 -> 采用当前结果 + 告警（不得静默）。"
+    tradeoff: "稳定性 vs 性能"
+    referenced_by: [reaction-solver]
+
+  - name: CONTENTION_CONVENTION
+    value: "层间抢（玩家可配优先级）；层内按需求比例等分"
+    note: "多台机器争同一池料的语义约定。A3 定义、A5 使用（A5 的图求值语义来自 A3）。"
+    requirement: "优先级必须【可存档】（丢了等于玩家的创作丢了）且【可见】（不可解释的饥饿就是噪音）"
+    referenced_by: [reaction-solver]
