@@ -70,6 +70,24 @@ godot --headless -s -d --remote-debug tcp://127.0.0.1:0 \
 `GdUnitTestSuiteScanner.gd:225` 抛 Parse Error 并**跳过了整个文件**，
 而外层看到的是"No test cases found"→ exit 0。
 
+**→ 而更可靠的通道是【结构化报告】，不是人读的输出流**（2026-10-03 实测教训）：
+
+gdUnit4 每次都写 `reports/report_<N>/results.xml`。**读它**：
+
+```python
+import xml.etree.ElementTree as ET
+r = ET.parse("reports/report_N/results.xml").getroot()
+print(r.get("tests"), r.get("failures"))            # 权威计数
+for tc in r.iter("testcase"):
+    f = tc.find("failure")
+    if f is not None: print(tc.get("name"), f.get("message"))
+```
+
+**为什么**：我曾连续 8 次用正则去解析那次运行的**终端输出**（带 ANSI 色码、换行时机不确定），
+**8 次全部误判** —— 其中一次让我以为"有 3 个测试没被发现"，还花了一整轮去查一个不存在的 bug；
+而 XML 里写着 `tests=41`，**41 个一个不少**。
+**→ 人读的输出是给人看的；判据要取结构化的那份。**
+
 **→ 防御办法（写测试时照做）**：**新增/修改测试文件后，必须看到它出现在 `Executed test suites: (N/M)` 里**
 —— 只要 `N` 对得上你期望的套件数，就说明没有文件被静默跳过。
 **只看到 exit 0 是不够的。**

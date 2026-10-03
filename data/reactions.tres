@@ -1,0 +1,79 @@
+[gd_resource type="Resource" script_class="CompoundData" format=3]
+
+[ext_resource type="Script" path="res://scripts/compound_data.gd" id="1_vkv8g"]
+
+[resource]
+script = ExtResource("1_vkv8g")
+steps = [{
+"conditions": [{
+"alt": {
+"H2": 1,
+"H2|O2": 1
+},
+"brk_hi": 130.0,
+"brk_lo": 20.0,
+"coef_hi": 0.4,
+"coef_lo": 0.6,
+"opt_hi": 90.0,
+"opt_lo": 60.0,
+"param": &"param_temperature"
+}],
+"disaster": "h2_o2_deflagration",
+"id": "water_electrolysis",
+"inputs": {
+"H2|O1": 2
+},
+"outputs": {
+"H2": 2,
+"O2": 1
+}
+}, {
+"conditions": [{
+"alt": {
+"Cl1|Na1": 2,
+"H2|O1": 2
+},
+"brk_hi": 120.0,
+"brk_lo": 30.0,
+"coef_hi": 0.5,
+"coef_lo": 0.3,
+"opt_hi": 95.0,
+"opt_lo": 70.0,
+"param": &"param_temperature"
+}],
+"disaster": "chlorine_evolution",
+"id": "chlor_alkali",
+"inputs": {
+"Cl1|Na1": 2,
+"H2|O1": 2
+},
+"outputs": {
+"Cl2": 1,
+"H1|Na1|O1": 2,
+"H2": 1
+}
+}, {
+"conditions": [{
+"alt": {
+"Ca1|Cl2": 1,
+"H1|Na1|O1": 2
+},
+"brk_hi": 80.0,
+"brk_lo": 5.0,
+"coef_hi": 0.2,
+"coef_lo": 0.2,
+"opt_hi": 40.0,
+"opt_lo": 20.0,
+"param": &"param_temperature"
+}],
+"disaster": "scaling_runaway",
+"id": "hardness_removal",
+"inputs": {
+"Ca1|Cl2": 1,
+"H1|Na1|O1": 2
+},
+"outputs": {
+"Ca1|H2|O2": 1,
+"Cl1|Na1": 2
+}
+}]
