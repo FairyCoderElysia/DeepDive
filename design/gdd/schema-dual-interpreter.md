@@ -3,7 +3,11 @@
 > **Status**: **Approved**（2026-10-02 评审通过 —— 见 `design/gdd/reviews/schema-dual-interpreter-review-log.md`）
 > **Category**: Core · **Layer**: Foundation · **Priority**: T1
 > **Depends On**: **A1**（元素表 schema + 参数 schema）· **A2**（化合物与步骤 schema + `schema_version`）
-> **被依赖**: **0 个** —— **全项目第一个"终端系统"**（口径：`systems-index` 的 `Depends On` 列含 `A4` 的行数）
+> **被依赖**: **1 个**（**B16**）—— 口径：`systems-index` 的 `Depends On` 列含 `A4` 的行数。
+> ⚠️ **此处曾有自我更正**：A4 设计时原记为「0 个 · 全项目第一个终端系统」，
+> 后来发现 **B16 读旧档时必须调用 A4 的迁移机制** → **B16 增加了指向 A4 的依赖**。
+> **教训（保留）**：**一张依赖图里"某系统没有人依赖它"这种否定式断言，比肯定式断言更容易错** ——
+> 因为它要求你检查完所有行才能成立。（本轮跨 GDD 审计又把这条抓了一次：头部没跟着改。）
 > **承担的角色**: 按索引的 Agent 列，它是**唯一的双 agent 指派**
 > （`game-designer + godot-gdscript-specialist`）—— **它必须同时活在两侧。**
 > **设计顺序**: 第 4 位

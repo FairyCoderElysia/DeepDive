@@ -225,7 +225,7 @@ A3 才去比较"实际有多少 vs 需要多少"、从而算出谁是限制试�
 ## Dependencies
 **上游：A1（唯一）。**
 
-**下游 2 个（A3 · A4）：见 §Interactions with Other Systems 的契约表（本处不重复）。**
+**下游 3 个（A3 · A4 · B7）：见 §Interactions with Other Systems 的契约表（本处不重复）。**
 
 > **为什么不重复**：与 A1 同一条理由 —— 同一个事实写在两处就会漂移。
 > 本项目已实测过 6 次这类事故。**契约表的唯一权威位置是 §Interactions。**
