@@ -40,7 +40,7 @@
 | 4 | A4 Schema 双解释器与契约校验 | Core | T1 | **Approved** | design/gdd/schema-dual-interpreter.md | A1, A2 |
 | 5 | A5 工艺图与连续流求解 | Core | T1 | **Approved** | design/gdd/process-graph.md | A3 |
 | 6 | A6 参数与代价面 | Core | T1 | **Approved** | design/gdd/parameters-cost-surface.md | A3 |
-| 7 | B1 连线编辑与四种连线决策 | Gameplay | T1 | **In Design** | design/gdd/connection-decisions.md | A5, B2, B3, B4 |
+| 7 | B1 连线编辑与四种连线决策 | Gameplay | T1 | **Approved** | design/gdd/connection-decisions.md | A5, B2, B3, B4 |
 | 8 | B2 污染物与失败通道（Cl / 结垢） | Gameplay | T1 | **Approved** | design/gdd/contaminants-failure-channels.md | A3, A6 |
 | 9 | B3 纯度分级与分离提纯 | Gameplay | T1 | **Approved** | design/gdd/purity-grading.md | B2, A1 |
 | 10 | B4 氧气经济（无货币） | Economy | T1 | **Approved** | design/gdd/oxygen-economy.md | A3 |
@@ -233,9 +233,9 @@
 |--------|-------|
 | Total systems identified | **29** |
 | Design docs started | **12** |
-| Design docs reviewed | **11**（A1–A6 · B4 · B6 · B2 · B3 · B5，Verdict 均 APPROVED） |
+| Design docs reviewed | **12**（A1–A6 · B4 · B6 · B2 · B3 · B5 · B1，Verdict 均 APPROVED） |
 | Design docs approved | 0 |
-| **T1（垂直切片）系统已设计** | 11 / **16**（Core 段 11 个已评审 APPROVED；**B1 骨架已建、在设计**） |
+| **T1（垂直切片）系统已设计** | 12 / **16**（Core 段 11 个 + B1 均已评审 APPROVED） |
 | **T2（MVP）系统已设计** | 0 / **7** |
 | **T3（完整愿景）系统已设计** | 0 / **6** |
 
