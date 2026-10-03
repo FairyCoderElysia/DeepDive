@@ -449,6 +449,26 @@ formulas:
     variables: [信号色额度, B10 的分级]
     referenced_by: [hud-ui]
 
+  - name: heatmap_substrates
+    description: 热力图的两个基板及其各自的映射。
+    expression: |
+      深度轴（连续场）： 视觉量 = f(深度, 读数)      ← 基板来自 C1 的一维连续轴
+      图（离散点）：     视觉量 = f(节点或边, 读数)  ← 基板来自 A5 的读数
+    maps_what: "连续场表达'越深越……'；离散点表达'这一台怎么了'"
+    source: "'逐格'的翻译（SPATIAL_WORD_TRANSLATION_RULE 的第四次触发）"
+    referenced_by: [heatmap-base-layer]
+
+  - name: fouling_third_display
+    description: 结垢的第三显示位 —— 它【不在流上】。
+    expression: "结垢标记(node) = g(积垢量)     ← 挂在节点上的【附加符号】，不是节点的值"
+    why: |
+      B2 的契约：结垢是【设备状态】，不是组成 —— 不得假设可以靠看物流发现。
+      而热力图天然是"流"的（两个基板都是）-> 所以结垢不能画在"流"上。
+    danger: |
+      若把结垢当成"节点的另一个读数"，它就会与"流"混在一起，
+      而那时 B2 的整条通道就失去了"慢性、看不见"的特性（那正是它存在的理由）。
+    referenced_by: [heatmap-base-layer]
+
 constants:
 
   # ---------- 计量与口径 ----------
@@ -1226,3 +1246,26 @@ constants:
     source: "L4（2026-10-02）：'降认知负荷靠把事实放对位置，不靠删严谨性'"
     consequence: "所以 B11 是'决策界面'，不是'事实界面'"
     referenced_by: [hud-ui]
+
+  # ---------- B12 引入的常量 ----------
+
+  - name: HEATMAP_SUBSTRATES
+    value: "深度轴（连续场）+ 图上的节点与边（离散点）—— 两个基板"
+    key_point: "两个基板都不是新造的 —— 它们分别来自 C1 的一维连续轴与 A5 的读数（art-bible 的资产里也有'分层背景'）"
+    referenced_by: [heatmap-base-layer]
+
+  - name: ONE_HEATMAP_LAYER_AT_A_TIME
+    value: "一次一个子图层，可快速切换（不叠加）"
+    two_reasons: "① 语义不同（温度的高与氧的高不是同一件事）· ② 可分辨度是有限预算（同 art-bible §1 的逻辑）"
+    note: "氧已经在 HUD 常驻（B11 的③），所以热力图不必为它留位"
+    referenced_by: [heatmap-base-layer]
+
+  - name: DEFAULT_HEATMAP_LAYER
+    value: "温度"
+    why: "L1/B8 定了'开局给的旋钮是温度 T + 催化剂' -> 开局的热力图应该是温度（它对应玩家此刻唯一能用上的旋钮）"
+    referenced_by: [heatmap-base-layer, progressive-unlock]
+
+  - name: HEATMAP_IS_NOT_A_DEBUG_TOOL
+    value: "它是主图层、默认可用 —— 不是可选 debug overlay"
+    source: "概念文档 line 360（争'可选 debug overlay' vs '常规视图' -> 选常规视图）"
+    referenced_by: [heatmap-base-layer]
