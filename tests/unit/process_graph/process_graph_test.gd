@@ -167,9 +167,7 @@ func test_cleaning_is_a_downtime_with_zero_rate_not_a_batch() -> void:
 
 # ============================================================ ⑤ 接不住 → 阻塞上游
 
-## ⚠️ A5 的 ⑤ 要"下游可用容量 + 储罐余量"—— 而**容量是 B6 的**。
-##   所以本实现只做**结构**（把产出写进账），容量判定留给 B6。
-##   这条测试因此只验"结构成立"：产出确实进了账，**而不是假装容量已实现**。
+## 无容量声明时：产出确实进了账（结构成立）
 func test_outputs_are_pushed_into_the_pool_structurally() -> void:
 	var g = _new_graph()
 	g.add_node(_node("e", _electrolysis_step("el")))
@@ -178,3 +176,49 @@ func test_outputs_are_pushed_into_the_pool_structurally() -> void:
 	# 水被消耗、H₂/O₂ 被产出 —— 而【没有容量上限】，所以这里不验"阻塞"
 	assert_bool(int(avail.get(_H2(), 0)) > 0).is_true()
 	assert_bool(int(avail.get(_O2(), 0)) > 0).is_true()
+
+
+# ============================================================ ⑤ 接不住 → 阻塞上游 + 告警
+
+## ★ ⑤ 的落点：**A5 不拥有容量**（那是 B6 的概念），只在活跃集判定里
+##   **尊重调用方给的容量** —— 满了就【停用该节点 + 告警】，而**绝不丢弃**。
+##   注意"绝不丢弃"在这里的正确含义：**不是"产出了再丢"，而是根本不产。**
+func test_output_at_capacity_blocks_the_node_and_never_discards() -> void:
+	var g = _new_graph()
+	var H := _H2()
+	var n := _node("e", _electrolysis_step("el"))
+	# 声明容量：H₂ 上限 10
+	n["capacity"] = {H: 10}
+	g.add_node(n)
+
+	var avail := {_H2O(): 10, H: 10}          # H₂ 已经满了
+	var before := avail.duplicate()
+	var r = g.evaluate(avail, _table(), RS.new())
+
+	# ① 该节点没进活跃集 -> 没有结果
+	assert_int((r["results"] as Dictionary).size()).is_equal(0)
+	# ② 它出现在 blocked 里（上游停产）
+	assert_bool((r["blocked"] as Array).has(&"e")).is_true()
+	# ③ ★ **绝不丢弃**：账没被改动（既没产出溢出，也没把料扣掉）
+	assert_int(int(avail[_H2O()])).is_equal(int(before[_H2O()]))
+	assert_int(int(avail[H])).is_equal(10)
+
+
+## 未满时照常推进（容量是上限，不是开关）
+func test_output_below_capacity_advances_normally() -> void:
+	var g = _new_graph()
+	var n := _node("e", _electrolysis_step("el"))
+	n["capacity"] = {_H2(): 100}              # 上限很远
+	g.add_node(n)
+	var avail := {_H2O(): 4, _H2(): 0}
+	var r = g.evaluate(avail, _table(), RS.new())
+	assert_bool((r["blocked"] as Array).is_empty()).is_true()
+	assert_bool(int(avail.get(_H2(), 0)) > 0).is_true()
+
+
+## 没声明容量 -> 完全不受影响（容量是【可选】接口，A5 不自己造默认值）
+func test_no_capacity_declared_means_no_limit() -> void:
+	var g = _new_graph()
+	g.add_node(_node("e", _electrolysis_step("el")))
+	var r = g.evaluate({_H2O(): 4}, _table(), RS.new())
+	assert_bool((r["blocked"] as Array).is_empty()).is_true()

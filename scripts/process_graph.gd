@@ -12,10 +12,12 @@ extends RefCounted
 ##   ⑦ **A5 持有图**（存图 + 求值）；**B1 只是编辑器** —— 所以依赖方向是 B1 → A5。
 ##   ⑧ **性能形状随管段数增长**（与 A1 的原子数、A3 的机器数**正交**）。
 ##
-## ⚠️ 一处**刻意的边界**（本轮如实标注）：
-##   ⑤ 的"接不住"判据需要【下游可用容量 + 储罐余量】—— 而**容量是 B6 的**。
-##   所以本实现只做"节点想把产出推出去"的**结构**（把产出写进 available），
-##   而**容量判定留给 B6 接进来**（接缝在 `_push` 上）。**现在不要假装它已经实现了。**
+## ⑤ 的落点（**已实现，且不越界**）：
+##   "接不住"的对象是【下游的缓存/储罐】—— 而**容量是 B6 的概念**，不归 A5。
+##   所以 A5 **不拥有容量**，只在**活跃集判定**里【尊重调用方提供的容量】：
+##   某节点的产出物已达容量上限 -> **该节点停用（上游阻塞）+ 告警**，**绝不丢弃**。
+##   `capacity` 是节点上的**可选**字段：`{"元素/组成式 key": 上限}`；不给 = 无上限。
+##   ⚠️ 这块接口的形状是 A5 定的，而**容量的语义与数值仍属 B6** —— B6 落地时把它接进来即可。
 
 ## 环路迭代上限（A5 的 ⑥：带迭代上限 + 超限告警）
 const MAX_RING_ITERATIONS := 8
@@ -141,6 +143,7 @@ func evaluate(available: Dictionary, table: CompoundData, solver: ReactionSolver
 	# ③ 活跃集由 A5 决定：能拿到输入的节点。**空图 -> 空结果。**
 	var ring_iters := 0
 	var warned := false
+	var blocked: Array = []          # ⑤ 被阻塞的节点（上游停产）
 	var last: Dictionary = {}
 	var all_results: Dictionary = {}
 
@@ -150,8 +153,15 @@ func evaluate(available: Dictionary, table: CompoundData, solver: ReactionSolver
 		var machines: Array = []
 		for id: StringName in order:
 			var n: Dictionary = _nodes[id]
-			if _has_any_input(n, available, table):
-				machines.append(n)
+			if not _has_any_input(n, available, table):
+				continue
+			# ⑤ 接不住 -> 阻塞上游 + 告警（**绝不丢弃**：不是"产出了再丢"，而是根本不产）
+			if _output_is_full(n, available, table):
+				if not blocked.has(id):
+					blocked.append(id)
+					push_warning("A5：节点 %s 的产出已满 -> 阻塞上游 + 告警（A5 的 ⑤，绝不丢弃）" % id)
+				continue
+			machines.append(n)
 		if machines.is_empty():
 			break
 		# ★ 内层：**交给 A3**（它自己做优先级分层 + 层内联立 + 层内不动点）
@@ -177,7 +187,7 @@ func evaluate(available: Dictionary, table: CompoundData, solver: ReactionSolver
 		warned = true      # A5 的 ⑥：超限必须告警，不得静默
 
 	return {"results": all_results, "ring_iterations": ring_iters,
-			"warned": warned, "has_cycle": has_cycle}
+			"warned": warned, "has_cycle": has_cycle, "blocked": blocked}
 
 
 # ---------------------------------------------------------------- 内部
@@ -193,6 +203,18 @@ func _snapshots_equal(a: Dictionary, b: Dictionary) -> bool:
 
 ## ③ 活跃集判据：这个节点能不能从账上拿到它要的输入。
 ## ⚠️ A3 会自己做"够不够"的判定，所以这里只做**粗判**（有没有任何输入键的存量 > 0）。
+## ⑤ 的判据：这个节点的【产出物】是不是已经满了。
+## **满了就不该再推进** —— 因为推进只会让产出溢出（而"绝不丢弃"意味着那部分本来就不该产出）。
+func _output_is_full(n: Dictionary, available: Dictionary, table: CompoundData) -> bool:
+	var cap: Dictionary = n.get("capacity", {})
+	if cap.is_empty():
+		return false
+	for k: String in cap:
+		if int(available.get(k, 0)) >= int(cap[k]):
+			return true
+	return false
+
+
 func _has_any_input(n: Dictionary, available: Dictionary, table: CompoundData) -> bool:
 	for b: Dictionary in _branches_of(n):
 		for k: String in (b.get("inputs", {}) as Dictionary):
