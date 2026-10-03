@@ -440,6 +440,15 @@ formulas:
       而玩家的下一个动作是"我该做什么" -> 两者都需要，而顺序固定。
     referenced_by: [diagnosis-feedback]
 
+  - name: information_priority
+    description: 信息优先级 —— B11 的实质规则（不是排版，而是在颜色预算下做取舍）。
+    expression: |
+      常驻额度 = 2 个信号色            ← art-bible §4 的硬上限
+      氧固定占 1                        ← art-bible §4：氧青绝不用于危险
+      所以能常驻的只有【1 个】"你现在必须做什么"，由 B10 的分级决定
+    variables: [信号色额度, B10 的分级]
+    referenced_by: [hud-ui]
+
 constants:
 
   # ---------- 计量与口径 ----------
@@ -1167,3 +1176,53 @@ constants:
     note: "这是三条上游契约（A3/B2/B5）的同一句话：若上游不记录归因，诊断就无从下手。"
     consequence: "B10 不产生归因，它只【消费】归因 —— 所以它的正确性取决于三处上游是否按同一形状记录"
     referenced_by: [diagnosis-feedback]
+
+  # ---------- B11 引入的常量 ----------
+
+  - name: HUD_AMBIENT_QUOTA
+    value: "常驻 = 氧气 + 当前诊断（两个信号色正好用满）；其余按需展开"
+    why_arithmetic: |
+      这不是设计偏好，而是【颜色预算的算术结果】：
+      art-bible §1（饱和度只给氧气和危险 -> 信号色总量 4 个语义）·
+      §4（同一画面最多两个信号色）· §4（氧青绝不用于危险 -> 氧气固定占一个）
+      -> 常驻内容只剩【一个】信号色的额度 = 当前诊断。
+      这正是 art-bible"形状必须承担主要的信息负载"的由来：信号色不够用，所以形状必须扛。
+    referenced_by: [hud-ui]
+
+  - name: HEATMAP_IS_THE_BASE_LAYER
+    value: "热力图是背景主图层，HUD 叠在其上（两层）"
+    color_division: |
+      热力图（主图层）用【底色与渐变】（art-bible 的 3 个底色）；
+      HUD（叠层）用 4 个信号色（同画面最多 2 个）。
+      判据：信号色的语义是"你现在必须做什么"；而热力图给的是"环境是什么样的"（状态而非指令）。
+    why_critical: |
+      若不划清，热力图（温度/压强/氧/纯度）会把信号色额度吃光，
+      同一画面就会超过两个 -> 而 art-bible §4 说"出现三个及以上时，信号就不再是信号了"。
+    source: "概念文档 line 360（热力图是主图层，不是调试工具）+ art-bible §4"
+    referenced_by: [hud-ui]
+
+  - name: DUAL_CHANNEL_READING
+    value: "读数 = 数字 + 形状【双通道】"
+    division_of_labor: "数字给【精确值】（离下一档还差 0.05%）· 形状给【状态与趋势】（在往哪边走、离边界多远）"
+    why_inevitable: |
+      B3 的契约说"不得假设'差一点'等于'差不多'"（99.85% 与 99.95% 在这里一个可用一个不可用）
+      -> 需要精确值（纯图形会丢）；
+      art-bible §3④ 说形状必须承担主要信息负载 -> 需要形状。
+      两条合起来 = 双通道。
+    referenced_by: [hud-ui]
+
+  - name: CONSUMER_NOT_RECOMPUTER
+    value: "B11 是【消费者】，不是【重算者】—— 它显示的每一个数都必须来自上游"
+    four_contracts: |
+      B10：不得假设自己能推原因 · B3：不得假设档位可事后补算 ·
+      B4：不得假设"产出"总是正贡献 · A6：不得假设有全维视图、不得假设可事后重建。
+    consequence: |
+      这四句是同一句。若 B11 开始自己算（哪怕"顺手算一下"），
+      本项目那 6 次"同一事实两处定义然后漂移"的事故就会有第 7 次。
+    referenced_by: [hud-ui]
+
+  - name: UI_CARRIES_DECISIONS_ONLY
+    value: "界面只承担【决策】；事实全部收进百科（B7）"
+    source: "L4（2026-10-02）：'降认知负荷靠把事实放对位置，不靠删严谨性'"
+    consequence: "所以 B11 是'决策界面'，不是'事实界面'"
+    referenced_by: [hud-ui]
