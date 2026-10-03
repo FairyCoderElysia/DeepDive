@@ -47,9 +47,12 @@ naming:
   scenes: snake_case
 
 commands:
-  build: "[TO BE CONFIGURED]"   # TODO: 无 export_presets.cfg。preset 名是项目自定义的，
-                                # §5.5.1 明令 ASK——猜一个不存在的名字会让 build
-                                # "运行成功但构建错平台"，或直接 Unknown export preset
+  build: "godot --headless --path . --editor --quit"   # 2026-10-03（/test-setup）：先用"构建校验"。
+                                # 它跑一遍完整导入 + 全项目脚本/资源扫描 —— 脚本写错、类名冲突、
+                                # 资源丢失都会在这里 exit != 0，所以它真的能挡住"构建坏了"。
+                                # ⚠️ 真正的 export 仍需 export_presets.cfg 与【preset 名】，
+                                # 而 §5.5.1 明令 ASK（猜错会"运行成功但构建错平台"）。
+                                # 本作是 PC 单机，将来大概率是 Windows Desktop —— 但到时候再问你。
   test: "godot --headless -s -d --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests --ignoreHeadlessMode"
   run: "godot --path . --windowed --resolution 1280x720"
   smoke: "godot --headless --editor --quit"   # 2026-10-02 实测改的：原来的 "--quit-after 5"

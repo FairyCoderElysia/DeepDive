@@ -26,3 +26,6 @@ production/session-logs/
 # Python
 __pycache__/
 *.pyc
+
+# gdUnit4 运行时产生的报告（XML/HTML），不入库
+reports/

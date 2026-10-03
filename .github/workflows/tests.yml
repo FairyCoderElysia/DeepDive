@@ -1,0 +1,46 @@
+name: Automated Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Run GdUnit4 Tests
+    runs-on: ubuntu-latest
+    # 这个 action 把结果发布成一个 check run。新仓库的 token 是只读的，
+    # 没有 checks: write 时【即使全部测试通过，job 也会失败】。
+    # 若给 main 设了保护规则：要勾的 check 是 `Run GdUnit4 Tests`，
+    # 【不是】`test-results` —— 后者即使有测试失败也会报 success。
+    permissions:
+      contents: read
+      checks: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      # godot-version 必须是完整发行版号（4.7.2），VERSION.md 里的 "4.7" 不是。
+      # version: installed 表示【跑 addons/ 里已提交的那份 gdUnit4】——
+      # 不加它，action 会删掉那份并装最新版，而最新版可能和我们的测试不匹配。
+      # 本项目已提交 addons/gdUnit4（6.2.0），所以用 installed。
+      - name: Run GdUnit4 Tests
+        uses: godot-gdunit-labs/gdUnit4-action@v1
+        with:
+          godot-version: '4.7.2'
+          version: 'installed'
+          paths: |
+            tests/unit
+            tests/integration
+          report-name: test-results
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: reports/
