@@ -353,6 +353,27 @@ formulas:
       否则"必须下潜"在体感上不存在，P4 会退化成一句设定。
     referenced_by: [depth-layers]
 
+  - name: vein_abundance
+    description: 矿脉丰度 —— 某元素在某深度的含量。
+    expression: "丰度(元素, 深度) = ..."
+    owner: "分布规律由 C1 + C2 共同定（C1 给深度、C2 给矿脉）"
+    referenced_by: [ore-veins]
+
+  - name: extraction_rate
+    description: 开采速率 —— 受 C1 的带宽上限约束（C2 不重定义带宽）。
+    expression: "开采速率 = min(矿脉固有速率, 该深度的带宽上限, 该深度段的节点优先级)"
+    variables: [固有速率, 带宽上限, 优先级]
+    referenced_by: [ore-veins]
+
+  - name: extraction_cost
+    description: 开采代价 —— 【只有设备与基建这一份】。
+    expression: "代价 = f(深度, 设施等级)   ← 更深 = 更贵 / 等级更高"
+    ownership_rule: |
+      带宽归 C1、耗氧归 B4，都已有主；C2 只收"设备与基建"这一份。
+      若 C2 把三者都写一遍，就会造出同一事实的两处定义 ——
+      而本项目已实测过 6 次这类漂移事故。
+    referenced_by: [ore-veins]
+
 constants:
 
   # ---------- 计量与口径 ----------
@@ -865,3 +886,45 @@ constants:
     history: "概念文档自己承认：'本文件先前把这两件事混为一谈…现已分开'。"
     consequence: "C1 只管 (B) —— 这一条必须写进边界，因为概念文档自己在这上面犯过一次错"
     referenced_by: [depth-layers]
+
+  # ---------- C2 引入的常量 ----------
+
+  - name: ORE_IS_A_SOURCE_NODE
+    value: "矿脉是一个【源节点】（与海水同类），不是一种操作原语"
+    symmetry_reason: |
+      概念文档把海水与矿脉当成一对（"海水无限但低通量；矿脉高密度但高代价"）——
+      它们应该是同一类东西的两个实例，而不是"一个是环境、一个是机器"。
+    other_reasons: "① 6 个操作原语里没有'开采'（原语是化学操作）· ② 少一层没有决策含量的中间件"
+    referenced_by: [ore-veins]
+
+  - name: ORE_YIELDS_COMPOUNDS
+    value: "矿脉产出【化合物】，不是元素 —— 挖到矿 != 拿到元素，中间必须有一条提炼线"
+    why: |
+      物理上矿就是化合物（赤铁矿 Fe2O3 / 黄铜矿 CuFeS2 / 磷灰石），
+      而 A2 的化合物表本来就以【组成为关键】。
+      -> 所以中间必须有一条提炼线（还原/焙烧/浸出 = 真正的冶金化学）。
+    consequence: |
+      它顺带解释了"高代价"的另一半：不是"挖得慢"，而是"挖到了还得炼"。
+      若把矿脉做成"元素水龙头"，会同时废掉冶金这一整块化学。
+    provenance: "从模型推出（矿是化合物 + A2 以组成为关键），不是新加的设计决定"
+    referenced_by: [ore-veins]
+
+  - name: VEIN_ONLY_ELEMENT_CRITERIA
+    value: "判据：凡【不在海水里】、且【产物树或飞船需要】的元素 —— 就仅矿脉可得"
+    candidate_list: [C, N, P, Si, Fe, Cu]
+    candidate_roles: |
+      C = 有机化学/燃料/还原剂（化学树最大的一支）· N = 氨/硝酸盐/含能材料（连 B5 的灾难）·
+      P = 磷酸盐/肥料 · Si = 玻璃/陶瓷/半导体 · Fe = 结构材料（飞船主体）· Cu = 导线/合金
+    not_locked: "这是【候选】不是定案 —— 最终确认留到 T3 内容期（概念文档 Risk #9 说'不在概念层拍'）"
+    risk9_landing: |
+      概念文档 Risk #9 把这份清单指派给"元素池与化学计量系统的 GDD"，
+      但那条指派【没有被执行】：A1 只造了钩子（字段"是否矿脉专属"）而没填清单，
+      A1->C2 与 C1->C2 的契约都把"哪些元素"指向 C2。
+      -> 一路无人认领（不是"漏写"，是"指派了但没人执行"）—— C2 已显式接住。
+    referenced_by: [ore-veins, element-pool]
+
+  - name: FORCED_DIVE_TWO_LEGS
+    value: "必须下潜的两条腿：种类腿（仅矿脉可得的元素）+ 通量腿（海水永远放不大）"
+    danger: "缺一条 P4 就不成立：只有种类 -> 拿完关键元素就回表层；只有通量 -> 可以用海水慢慢堆到后期"
+    source: "用户明确约束：'深海不是选择项，是必须项……有些元素需要深海矿脉才能获取，后期大规模获取元素也必须依靠深海矿脉。'"
+    referenced_by: [ore-veins]
