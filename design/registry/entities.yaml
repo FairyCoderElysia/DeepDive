@@ -248,6 +248,37 @@ formulas:
       （Key Dynamics #2 循环死锁）-> "清洗"与"回流比例"成为同一个决策的两面。
     referenced_by: [contaminants-failure-channels]
 
+  - name: purity_relative_to_target
+    description: 纯度 —— 【相对于目标产物】的量，不是物流的固有属性。
+    expression: "纯度(物流, 目标) = 目标产物的量 / 该物流的原子总数"
+    variables: [物流, 目标产物, 原子总数]
+    target_source: "目标由【产出它的那一步】声明（A2 的步骤记录里已有 outputs.主产物 字段）"
+    why_not_intrinsic: |
+      若靠"谁占比最大谁就是主"来算，纯度会随物流成分变化而反复改名，档位就没有意义了
+      （同一份物流一会儿是"水 99.5%"、一会儿是"氧 60%"）。
+      -> 纯度这个词必须带一个"相对于什么"。
+    consequence: "没有声明主产物的物流没有档位（例如 B6 混装罐里按比例取出的那股）—— 它需要先被分离"
+    referenced_by: [purity-grading]
+
+  - name: purity_grade_mapping
+    description: 纯度 -> 三档（边界与 A2 的 [a,b) 约定一致）。
+    expression: |
+      纯度 ∈ [99.9%, ∞)      -> 可用
+      纯度 ∈ [99.0%, 99.9%)  -> 需精制（必须接一条分离产线）
+      纯度 ∈ [0, 99.0%)      -> 不可用（分离也救不回来，只剩存贮/销毁）
+    variables: [纯度]
+    boundary_note: "99.9% 恰好达标算【可用】（概念文档说'规格是 99.9%'）；99.0% 恰好算【需精制】"
+    thresholds: "全局统一（见 PURITY_THRESHOLDS）"
+    referenced_by: [purity-grading]
+
+  - name: separation_output_split
+    description: 分离的产出分配与三方拉扯。
+    expression: "输入 -> { 可用产物: 量 × 回收率,  废物流: 量 × (1 - 回收率) }"
+    variables: [输入量, 回收率]
+    triangle: "回收率 / 耗氧 / 废物流量 —— 三者互相拉扯；三个原语在三维上的【排序必须各不相同】"
+    chaining: "允许串联（分离出的产物若仍不达标可再分离），但输入 < 99.0% 时无论串多少次都不可用"
+    referenced_by: [purity-grading]
+
 constants:
 
   # ---------- 计量与口径 ----------
@@ -516,3 +547,33 @@ constants:
     note: "概念文档原话：洁结垢是你自己的设备会老化、你要安排清理，不是有人在催你。"
     feel_difference: "前者是【你在管理】，后者是【你在被追】—— 这个区别是手感上的"
     referenced_by: [contaminants-failure-channels]
+
+  # ---------- B3 引入的常量 ----------
+
+  - name: PURITY_THRESHOLDS
+    value: { 可用: ">= 99.9%", 需精制: "99.0–99.9%", 不可用: "< 99.0%" }
+    note: "【全局统一】—— 三种阈值对所有产物一样。用户早先拍过（概念文档 line 93）。"
+    why_global: |
+      它与 B4 的一条硬约束一致：氧的双角色共用【同一个数字】。
+      若规格逐产物不同，就等于说"生命维持用的氧"与"工业用的氧"是两个标准 ——
+      而那正是 B4 明令禁止的"拆成两个池"的变体（不是拆池，而是拆规格）。
+      -> 全局统一不只是"简单"，它是那条约束的必然推论。
+    referenced_by: [purity-grading]
+
+  - name: NO_RESCUE_FLOOR
+    value: "输入纯度 < 99.0% -> 不可救（分离也救不回来，含稀释）"
+    note: "概念文档明写'<99.0% 太脏，分离也救不回来，只能存贮或销毁'。"
+    vs_chaining: |
+      它与"允许串联"不矛盾：地板是对【输入】说的（低于它，怎么分、分多少次都没用），
+      串联针对的是【地板之上】的物流（99.5% 可以靠串联两次做到 99.95%）。
+      -> 地板是绝对的，而地板上方是可以用工序堆出来的。
+      【若这条不写清，实现者会走两个方向之一、而两个都错】——
+      把地板读没（"只要串就总能救"）或把产线读成开关（"一次分离定生死"）。
+    referenced_by: [purity-grading]
+
+  - name: SEPARATION_PRIMITIVES_T1
+    value: [冷凝, 碱洗吸收, 吸附]
+    note: "T1 的三个分离原语（用户拍板）。概念文档给了碱洗与吸附的对比：碱洗回收率最高但产生含氯废液；吸附最费氧但污染残留最少。"
+    requirement: "三者在'回收率 / 耗氧 / 废物流量'上的【排序必须各不相同】，否则'分离路线本身是设计题'不成立"
+    open: "冷凝的位置待定 —— 它必须与另两者排序不同"
+    referenced_by: [purity-grading]
