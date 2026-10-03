@@ -279,6 +279,36 @@ formulas:
     chaining: "允许串联（分离出的产物若仍不达标可再分离），但输入 < 99.0% 时无论串多少次都不可用"
     referenced_by: [purity-grading]
 
+  - name: disaster_chain_propagation
+    description: 灾难的连锁传播 —— 【沿图的边】，不沿空间。
+    expression: |
+      失控节点 --沿出边--> 下游节点（若未隔离）
+      隔离生效 -> 该边断流，传播中止
+    variables: [失控节点, 出边, 隔离状态]
+    why_along_edges: |
+      概念文档说"爆罐"，那个词听起来很空间，但本作【没有空间模型】
+      （Core Mechanics #4：管网是节点+边的逻辑图，不是逐 tile 模拟）。
+      机器之间只有"连没连"，没有"旁边" -> 连锁只能沿边。
+      这恰好让"保险三件套"全部说得通：隔离 = 在边上断流、旁通 = 绕开受损节点/边、
+      泄压 = 设备自身属性 —— 三者都是【图/设备】层面的事，一个都不需要空间。
+    presentation_split: |
+      表现上【可以】做得像"炸到了旁边"（那正是"壮观"要的），但机制上必须是
+      "失控的物料沿边流到了下游" —— 否则实现者会去找一个不存在的空间模型。
+    referenced_by: [disasters-runaway]
+
+  - name: disaster_repair_cost
+    description: 灾难的修复成本 —— 连续旋钮，且受玩家投资影响。
+    expression: "修复成本 = f(严重度) ;  并且上了保险的产线赔偿上限更低"
+    variables: [严重度, 保险配置]
+    continuous: "是一个连续旋钮，不是'活/死'开关（设备仍存在、需修）"
+    knob_note: "这是概念文档风险 #5 那个刻度：太便宜则灾难失去重量、太贵则劝退 —— 需实测"
+    player_choice: |
+      保险是玩家造的（不是自动的）+ 修复成本随严重度 ->
+      "我的产线该不该上保险"成为一个真正的风险/收益决策。
+      这比"改一个全局系数"好得多：它让同一个数值下谨慎的玩家与鲁莽的玩家承受不同后果，
+      而"承担自己选择的后果"正是 P2 与 P3 的交汇点。
+    referenced_by: [disasters-runaway]
+
 constants:
 
   # ---------- 计量与口径 ----------
@@ -577,3 +607,30 @@ constants:
     requirement: "三者在'回收率 / 耗氧 / 废物流量'上的【排序必须各不相同】，否则'分离路线本身是设计题'不成立"
     open: "冷凝的位置待定 —— 它必须与另两者排序不同"
     referenced_by: [purity-grading]
+
+  # ---------- B5 引入的常量 ----------
+
+  - name: ENGINEERING_INSURANCE
+    value: [隔离, 泄压, 旁通]
+    note: "概念文档要求'提供隔离、泄压、旁通这类工程上的保险给玩家用'。"
+    owners: "【玩家造的】，不是自动生效的 —— 概念文档'提供…给玩家用'这句原话暗示了这一点"
+    what_each_does: "隔离 = 在边上断流（别让它传过去）· 泄压 = 别让它炸 · 旁通 = 绕开受损节点/边"
+    why_chaining_exists: |
+      【保险的存在本身就意味着有一个需要被保的东西】—— 而那东西就是连锁。
+      若灾难不连锁，这三样都没有对象，会变成三个没有用处的装饰件。
+      -> "会连锁"不是我们另加的设计，而是那句"提供工程保险"的必要前提。
+    referenced_by: [disasters-runaway]
+
+  - name: DISASTER_IS_NOT_RANDOM
+    value: "同存档 + 同操作序列 -> 灾难必然复现（无随机性）"
+    note: "P2 的底线：'严谨是美感'的全部卖点就是【不是运气】。"
+    consequence: "灾难像随机事件砸下来，就把它变成了运气 —— 而那不是本作要的东西"
+    referenced_by: [disasters-runaway]
+
+  - name: FOUR_KINDS_OF_STOPPED
+    value: "A3 对账锁 / B2 结垢失效 / A5 阻塞 / B5 灾难"
+    note: "四种「机器停下来了「的原因与恢复手段【完全不同】：确认基线 / 清洗 / 腾容量 / 修"
+    why_it_matters: |
+      界面上必须可区分 —— 否则玩家看到"我的机器停了"却不知道该怎么办，
+      而四种停法的修法互不通用。
+    referenced_by: [disasters-runaway]
