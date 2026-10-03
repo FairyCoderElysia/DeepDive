@@ -52,7 +52,7 @@
 | 16 | B10 诊断与反馈 | UI | T1 | **Approved** | design/gdd/diagnosis-feedback.md | B2, B5, A3 |
 | 17 | B11 HUD / UI `(inferred)` | UI | T1 | **Approved** | design/gdd/hud-ui.md | B10, B3, B4, A6 |
 | 18 | B12 热力图主图层 | UI | T2 | **Approved** | design/gdd/heatmap-base-layer.md | A5, B4, B2 |
-| 19 | B13 视觉身份·表层 | Visual | T2 | **In Design** | design/gdd/visual-identity-surface.md | A1 |
+| 19 | B13 视觉身份·表层 | Visual | T2 | **Approved** | design/gdd/visual-identity-surface.md | A1 |
 | 20 | B14 视觉身份·深度可读性 | Visual | T3 | Not Started | — | C1 |
 | 21 | B15 音频 `(inferred)` | Audio | T2 | Not Started | — | B5, B1 |
 | 22 | B16 存档 / 读档 `(inferred)` | Persistence | T2 | Not Started | — | A1, A5, B6, B8, C1, C3, A4 |
@@ -233,7 +233,7 @@
 |--------|-------|
 | Total systems identified | **29** |
 | Design docs started | **23** |
-| Design docs reviewed | **22**（Core 11 + Feature 8 + B10 · B11 · B12，Verdict 均 APPROVED） |
+| Design docs reviewed | **23**（Core 11 + Feature 8 + B10 · B11 · B12 · B13，Verdict 均 APPROVED） |
 | Design docs approved | 0 |
 | **T1（垂直切片）系统已设计** | 🎉 **16 / 16**（**全部已评审 APPROVED**） |
 | **T2（MVP）系统已设计** | 0 / **7** |
