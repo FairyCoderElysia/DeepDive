@@ -47,7 +47,7 @@
 | 11 | B5 灾难与失控 | Gameplay | T1 | **Approved** | design/gdd/disasters-runaway.md | A6, A3 |
 | 12 | B6 储罐与容量 `(inferred)` | Gameplay | T1 | **Approved** | design/gdd/tanks-capacity.md | A1 |
 | 13 | B7 百科 | Gameplay | T1 | **Approved** | design/gdd/encyclopedia.md | A2, A3, A6, B3 |
-| 14 | B8 渐进解锁 | Progression | T2 | **In Design** | design/gdd/progressive-unlock.md | B1, A6, B7 |
+| 14 | B8 渐进解锁 | Progression | T2 | **Approved** | design/gdd/progressive-unlock.md | B1, A6, B7 |
 | 15 | B9 工艺命名与工艺卡 | Progression | T2 | Not Started | — | A5, B7 |
 | 16 | B10 诊断与反馈 | UI | T1 | Not Started | — | B2, B5, A3 |
 | 17 | B11 HUD / UI `(inferred)` | UI | T1 | Not Started | — | B10, B3, B4, A6 |
@@ -233,9 +233,9 @@
 |--------|-------|
 | Total systems identified | **29** |
 | Design docs started | **14** |
-| Design docs reviewed | **13**（Core 段 11 个 + B1 · B7，Verdict 均 APPROVED） |
+| Design docs reviewed | **14**（Core 段 11 个 + B1 · B7 · B8，Verdict 均 APPROVED） |
 | Design docs approved | 0 |
-| **T1（垂直切片）系统已设计** | 13 / **16**（Core 段 11 个 + B1 · B7 均已评审 APPROVED；**B8 骨架已建、在设计**） |
+| **T1（垂直切片）系统已设计** | 13 / **16**（Core 段 11 个 + B1 · B7 已评审 APPROVED；B8 已评审，属 **T2**） |
 | **T2（MVP）系统已设计** | 0 / **7** |
 | **T3（完整愿景）系统已设计** | 0 / **6** |
 
