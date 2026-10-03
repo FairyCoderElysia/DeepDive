@@ -415,6 +415,23 @@ formulas:
     hard_boundary: "它可以改【东西在哪】，不可以改【东西是什么】"
     referenced_by: [procedural-generation]
 
+  - name: workload_estimate
+    description: 工作量估算 —— 三笔账【正交】，必须分别算。
+    expression: "工作量 ≈ f(原子数) + g(机器数) + h(管段数 × 嵌套轮数)"
+    nested_fixpoint: "嵌套轮数 = 环的迭代轮数 × 层数 × 层内迭代轮数（A5 的环不动点嵌套在 A3 的层不动点内）"
+    forbidden: "不得用一个数估算全部（三者是不同维度）"
+    referenced_by: [performance-budget]
+
+  - name: over_budget_slowdown
+    description: 超预算时的行为 —— 世界走慢（tick 变长），不降级。
+    expression: |
+      若 工作量 <= 每 tick 预算:  dt = 正常 dt
+      否则:                       dt = 正常 dt × (工作量 / 预算)
+                                  且 dt 不超过【下限】；到下限则告警
+    variables: [工作量, 预算, dt, 下限]
+    key_distinction: "'世界走慢' 是【游戏内时间】变慢（渲染仍流畅、每个 tick 仍精确），不是【帧率】掉"
+    referenced_by: [performance-budget]
+
 constants:
 
   # ---------- 计量与口径 ----------
@@ -1052,3 +1069,47 @@ constants:
       ② 与 Risk #9 冲突：那份"仅矿脉可得"的清单是【全局】的（判据不随局变）；
       ③ 它会让 B7 的百科失效：百科装的是【事实】，而事实不该随局变。
     referenced_by: [procedural-generation]
+
+  # ---------- B19 引入的常量 ----------
+
+  - name: THREE_ORTHOGONAL_ACCOUNTS
+    value: { 原子数: A1, 机器数: A3, 管段数: A5 }
+    note: "三者【正交】—— 不得用一个数估算全部（A5 的 ⑧ 已定，B19 必须分别预算）。"
+    referenced_by: [performance-budget]
+
+  - name: OVER_BUDGET_BEHAVIOR
+    value: "超预算 -> 世界走慢（tick 变长），不降级、不近似"
+    why_not_downgrade: |
+      降级（跳求值/复用上一 tick）会破坏 P2 的确定性底线（"同存档+同操作序列 -> 结果必然复现"，
+      B5 的⑨也是这条）；卡帧破坏手感；而【世界走慢什么都不破坏，因为本作无时限】。
+      这是本作【独有的一条自由】：别的工厂游戏只有"降级"或"卡帧"两个选择。
+    referenced_by: [performance-budget]
+
+  - name: SLOWDOWN_FLOOR_WITH_WARNING
+    value: "世界走慢【有下限】，且到下限【必须告警】—— 而它不是硬上限"
+    why: |
+      若无下限，"超预算"会变成无声的无限恶化（世界越来越慢直到不可玩，而玩家不知道为什么），
+      而那正是"不能是暗算"要禁止的形态。
+    not_a_cap: "硬上限说'你不许造'；下限+告警说'你可以造，但要知道会发生什么'。本作的立场指向后者。"
+    referenced_by: [performance-budget]
+
+  - name: NO_HARD_CAP_BUT_DESIGN_TARGET
+    value: "无硬上限，但有【设计目标规模】（100–500 边 / 50–200 节点）"
+    distinction: |
+      硬上限是一条【规则】（拒绝建造）；设计目标规模是一个【优化目标】（让"够不够快"有答案）。
+      选了"世界走慢"之后就不需要硬上限，但性能工作仍然需要一个目标。
+      这与 A1 的"写明假设"是同一种诚实：【承诺与目标必须分开写】。
+    referenced_by: [performance-budget]
+
+  - name: BUDGET_MUST_STATE_ITS_ASSUMPTION
+    value: "预算必须写明它的假设 —— 基准'万级原子/tick'来自一个【假设】而非实测"
+    source_warning: |
+      A1 原话："大工厂量级（1000 份/秒）是假设，不是实测 —— 它决定'万级原子/tick'这个基准，
+      而该基准直接决定 B19 的性能预算……若错一个数量级，B19 的预算全错一个数量级。"
+    consequence: "T1 不承诺具体性能数字（见下）；预算结构必须能在假设变化时【只更新数字、不推翻结构】"
+    referenced_by: [performance-budget, element-pool]
+
+  - name: T1_DELIVERABLE_SHAPE
+    value: "T1 交付 = 标杆场景 + 真机实测数字 + 预算框架，不承诺具体性能数字"
+    why: "若 T1 写确定值，就是把 A1 明确警告过的那个假设【钉成事实】"
+    referenced_by: [performance-budget]
