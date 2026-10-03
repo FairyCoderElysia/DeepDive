@@ -4,6 +4,8 @@
 
 [resource]
 script = ExtResource("1_vkv8g")
+schema_version = 1
+schema_fingerprint = "6db0c6fc2fea2c7c"
 steps = [{
 "conditions": [{
 "alt": {

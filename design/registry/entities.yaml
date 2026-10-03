@@ -697,6 +697,49 @@ constants:
     rationale: "完整校验的价值在于在开发者手上拦住错误，不在于在玩家机器上 —— 放运行时等于把开发期问题的代价推给玩家"
     referenced_by: [schema-dual-interpreter]
 
+  # ---------- A4 落地（2026-10-03 第一批）实测出来的常量 ----------
+
+  - name: SCHEMA_TRUTH_SOURCE
+    value: "design/schema/contract.yaml"
+    note: |
+      A4 的【唯一真相源】。两侧的期望值都从它得到（Core Rule ①）。
+      ⚠️ 实测收窄：**Godot 没有 YAML**（ClassDB.class_exists("YAML")=false；
+      JSON.parse_string 喂 YAML 得 null；而 ConfigFile.parse 竟返回 err=0，却把 `- id: a` 当成键名
+      —— 又一条"看起来正常"的失败形态）。
+      ⇒ 所以真相源的翻译在**开发期**由 `tools/gen_schema_contract.py` 完成，
+      GDScript 侧只拿到生成物 `scripts/generated/schema_contract.gd`，**运行时零 YAML 依赖**。
+    referenced_by: [schema-dual-interpreter]
+
+  - name: SCHEMA_VERSION_IS_GLOBAL
+    value: { granularity: "整份一个版本号", scope: "整个数据集的 schema 走到哪一版" }
+    note: |
+      A4 §States and Transitions 已定（该答案一直写在文件里，原先却还挂着一个 [待定] —— 已撤）。
+      实现上落在 `design/schema/contract.yaml` 顶层的 `version`。
+    referenced_by: [schema-dual-interpreter, element-pool, compound-reaction-data]
+
+  - name: SCHEMA_MISSING_SENTINEL
+    value: { version: 0, fingerprint: '""' }
+    note: |
+      「**无版本**」的哨兵 —— 默认值必须写成 0 / 空串，**不能写成 1**。
+      依据 A4 §Edge Cases：版本号【缺失】→ 拒绝载入（**不得当成 v1 猜**）。
+      若默认值就是 1，那么"忘了在 .tres 里写版本号"会被静默补成 v1 —— 那正是这条边界要防的。
+      （落地时真的撞上了：`data/reactions.tres` 原先根本没写 schema_version。）
+    referenced_by: [schema-dual-interpreter, element-pool, compound-reaction-data]
+
+  - name: SCHEMA_FINGERPRINT_LEN
+    value: 16
+    note: "内容指纹的 hex 长度。**长度是两侧契约的一部分** —— 各取一段会各自'看起来对'。"
+    rationale: "指纹是【数据损坏检测】，不是安全边界：它只需要能区分版本，不需要抗碰撞攻击。"
+    referenced_by: [schema-dual-interpreter]
+
+  - name: SCHEMA_HEAD_CHECK_OWNER
+    value: "机制归 A4（SchemaContract.check_head）· 调用归【组装点】"
+    note: |
+      为了**不让依赖图成环**：A4 依赖 A2（校验的正是 A2 的表），所以 A2 不该反过来引用 A4 的常量。
+      ⇒「缺没缺」由 A1/A2 自己的 validate() 报；「对不对」由组装点调 A4 报。
+      这与「机制归 A4、执行归 B16」是同一条切法。
+    referenced_by: [schema-dual-interpreter, element-pool, compound-reaction-data]
+
   # ---------- A5 引入的常量 ----------
 
   - name: GRAPH_SCALE

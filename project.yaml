@@ -54,6 +54,12 @@ commands:
                                 # 而 §5.5.1 明令 ASK（猜错会"运行成功但构建错平台"）。
                                 # 本作是 PC 单机，将来大概率是 Windows Desktop —— 但到时候再问你。
   test: "godot --headless -s -d --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests --ignoreHeadlessMode"
+  schema-check: "python tools/gen_schema_contract.py --check"   # 2026-10-03（A4）：真相源 = design/schema/contract.yaml
+                                # `scripts/generated/schema_contract.gd` 是**生成物且入库**（新克隆才跑得起来）。
+                                # 入库就带来一个风险：**有人改了 YAML、忘了重新生成**。
+                                # 这条命令把它从"靠自觉"变成"过不去"（生成物与真相源不一致 -> exit 1）。
+                                # ⚠️ 它需要 Python 3 + PyYAML（本机 3.10.11 / 6.0.3）；这是**开发期**依赖，
+                                # 不进运行时 —— 运行时零 YAML 依赖正是选"开发期生成"的理由（Core Rule ②）。
   run: "godot --path . --windowed --resolution 1280x720"
   smoke: "godot --headless --editor --quit"   # 2026-10-02 实测改的：原来的 "--quit-after 5"
                                 # 会因缺少 run/main_scene 直接报错并 exit=1（不是"挂着不退出"，

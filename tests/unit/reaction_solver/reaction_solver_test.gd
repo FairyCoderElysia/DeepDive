@@ -45,7 +45,9 @@ func _machine(id: String, step: Dictionary, priority := 0) -> Dictionary:
 
 func _table() -> CompoundData:
 	var d = CD.new()
-	d.schema_version = CD.SCHEMA_VERSION
+	# 版本号/指纹的来源是 A4 的契约头（`CD.SCHEMA_VERSION` 已删 —— 那是第二处定义）
+	d.schema_version = SchemaContract.SCHEMA_VERSION
+	d.schema_fingerprint = SchemaContract.SCHEMA_FINGERPRINT
 	return d
 
 

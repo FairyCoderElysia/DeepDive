@@ -56,7 +56,33 @@ var _tick := 0
 var _temp := 45.0
 
 
+## ★ A4 的**运行时唯一把关的地方**（Core Rule ②）：一份数据自称按哪一版写的，
+## 与本内核认的那一版是否**同时**在「版本号」与「内容指纹」上一致。
+##
+## ⚠️ 为什么这一段在**组装点**（本文件）而不是写进 `CompoundData.validate()`：
+##   A4 依赖 A2（A4 校验的正是 A2 的表），所以 **A2 不该反过来引用 A4 的契约头** —— 那会成环。
+##   机制归 A4、**调用归组装点** —— 与索引里那条「机制归 A4、执行归 B16」是同一条切法。
+func _require_contract() -> void:
+	var errs := SchemaContract.check_head(TABLE.schema_version, TABLE.schema_fingerprint)
+	if errs.is_empty():
+		return
+	for e: String in errs:
+		push_error("[A4 契约] %s" % e)
+	# 拒绝载入（A4 §Edge Cases：版本缺失/不符都不得"猜一版"继续跑）
+	assert(false, "reactions.tres 与 schema 契约不符 —— 拒绝载入，见上面的 [A4 契约] 行")
+
+
+## 把 A4 那条检查的**结果**打进日志 —— 让"契约被真的检查过"是可见的，
+## 而不是"没报错，所以大概过了"。
+func _contract_banner() -> String:
+	var errs := SchemaContract.check_head(TABLE.schema_version, TABLE.schema_fingerprint)
+	if errs.is_empty():
+		return "契约=v%d/%s ✅" % [TABLE.schema_version, TABLE.schema_fingerprint]
+	return "契约=❌ %s" % " | ".join(errs)
+
+
 func _ready() -> void:
+	_require_contract()
 	_build_ui()
 	# ★ T1 的图：**三台机器 + 一条流**（这才是"垂直切片"该有的样子）
 	#   电解（水 → H₂+O₂）· 氯碱（NaCl+水 → NaOH+Cl₂+H₂）· 除硬（CaCl₂+NaOH → Ca(OH)₂+NaCl）
@@ -113,8 +139,9 @@ func _step() -> void:
 
 	_update_ui()
 	if _tick % LOG_EVERY_TICKS == 0:
-		print("[t=%3d T=%6.1f] 原子 H=%d O=%d 总=%d ｜ %s ｜ 对账=%s" % [
-			_tick, _temp, _pool.count(&"H"), _pool.count(&"O"), _pool.total(),
+		print("[t=%3d T=%6.1f] %s ｜ 原子 H=%d O=%d 总=%d ｜ %s ｜ 对账=%s" % [
+			_tick, _temp, _contract_banner(),
+			_pool.count(&"H"), _pool.count(&"O"), _pool.total(),
 			_compound_line(), "OK" if _pool.conservation_ok() else "FAIL"])
 	if _tick >= RUN_TICKS:
 		print("—— 跑满 %d tick，退出（对账 %s）" % [RUN_TICKS, "通过" if _pool.conservation_ok() else "失败"])

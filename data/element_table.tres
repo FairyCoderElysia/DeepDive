@@ -4,6 +4,8 @@
 
 [resource]
 script = ExtResource("1_o3tc0")
+schema_version = 1
+schema_fingerprint = "6db0c6fc2fea2c7c"
 elements = {
 &"C": {
 "atomic_mass": 12.011,

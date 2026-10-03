@@ -22,6 +22,23 @@ enum Group {
 ##   atomic_mass（g/mol）· group（分类组）· name（给百科 B7 用）
 @export var elements: Dictionary = {}
 
+## ★ A4：**schema 版本号**（A4 §Core Rules ② 的轻量检查要用它）。
+##
+## **默认值写 `0` 而不是 `1`，这是故意的** ——
+## A4 的 §Edge Cases 明写：「schema 版本号**缺失** → 拒绝载入（**不得当成 `v1` 猜**）」。
+## 若默认写成 `1`，那么"忘了在 .tres 里写版本号"会被**静默补成 v1** —— 那正是这条边界要防的事。
+## ⇒ `0` 是"**无版本**"的哨兵，不是"版本 0"。
+@export var schema_version: int = 0
+
+## ★ A4：**schema 内容指纹**（Core Rule ⑦）。
+##
+## 光有版本号抓不住最危险的那一类：**改了 schema 却忘了升版本号** ——
+## 那时版本检查会通过、迁移不会跑，数据被**静默地**按新 schema 解读。
+## 指纹是人可能忘、而数据自己不会忘的那一份证据。
+##
+## 默认空串同样是"缺失"的哨兵（**不得**回落到"那就当它是最新的吧"）。
+@export var schema_fingerprint: String = ""
+
 
 ## 原子量。**不存在则报错**，不得静默返回 0（那会让质量→原子悄悄算错）。
 func atomic_mass(symbol: StringName) -> float:
@@ -53,6 +70,12 @@ func validate() -> Array:
 	var errors: Array = []
 	if elements.is_empty():
 		errors.append("元素表是空的")
+	# ★ A4：**"缺版本号"与"版本号不对"是两件事** —— 这里只负责前者（后者要拿 A4 的契约头比）。
+	#   而这一条必须在这里、必须硬：A4 的 §Edge Cases 明写"缺失 -> 拒绝载入，不得当 v1 猜"。
+	if schema_version <= 0:
+		errors.append("元素表没有声明 schema 版本号（读到 %d）—— 拒绝载入：猜一版会静默损坏数据（A4 §Edge Cases）" % schema_version)
+	if schema_fingerprint == "":
+		errors.append("元素表没有声明 schema 内容指纹 —— 只比版本号抓不住『改了 schema 却忘了升版本号』（A4 Core Rule ⑦）")
 	for sym: StringName in elements:
 		var e: Dictionary = elements[sym]
 		var m := float(e.get("atomic_mass", -1.0))

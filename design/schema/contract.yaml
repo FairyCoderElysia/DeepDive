@@ -1,0 +1,156 @@
+# ════════════════════════════════════════════════════════════════════════════
+# A4 · 数据 schema 契约 —— **唯一真相源**（Core Rule ①）
+# ════════════════════════════════════════════════════════════════════════════
+#
+# 【这个文件是什么】
+#   它声明本项目**数据结构**的形状：哪张表有哪些字段、什么类型、什么约束。
+#   Python 侧与 GDScript 侧的期望值**都从这一个文件得到** ——
+#   所以"两侧各写一遍校验"这件事在结构上不可能漂移（Technical Risks #3 的处置）。
+#
+# 【它不是什么 —— 这条边界是 A4 的，不是我加的】
+#   A4 的 §Tuning Knobs「它不拥有的东西」明写：
+#     「schema 本身的形状属 A1/A2 —— 字段有哪些、类型是什么、范围多少，都不由 A4 决定。
+#       A4 只做三件事：校验、迁移、检测漂移。**不得在 A4 里"顺手"定义一个新字段**」
+#   ⇒ 所以本文件里的每一条**都是转写**，不是新发明。每一节的来源都标在下面。
+#
+# 【真相源 vs 设计权威 —— 两者不是一回事，别读混】
+#   · **设计权威** = 各系统的 GDD（A1 的元素表/参数 schema · A2 的化合物与步骤 schema）。
+#     设计要改，先改 GDD。
+#   · **本文件** = 给**代码**用的机器可读形态（两侧解释器的共同输入）。
+#   · GDD 改了而本文件没跟上 = **漂移**，但 ⚠️ **内容指纹【抓不到】它** ——
+#     指纹只覆盖「本文件 ↔ 数据文件」，覆盖不到「GDD ↔ 本文件」。
+#     这是已知边界，写在 A4 的 GDD 里，不假装它不存在。
+#
+# 【改了本文件之后必须做的一件事】
+#   跑 `python tools/gen_schema_contract.py` 重新生成 `scripts/generated/schema_contract.gd`，
+#   否则生成物会与真相源不一致（`--check` 模式会在 CI/构建时把它变成一个失败）。
+#   而**数据文件**（.tres）里记的指纹也要跟着更新 —— 那是**迁移**的活（A4 的迁移机制）。
+#
+# ════════════════════════════════════════════════════════════════════════════
+
+# ── 全局版本号（Core Rule ⑤：链式迁移，一次升一级）──────────────────────────
+# ★ **粒度 = 整份一个**（不是每张表各自一个）。依据是 A4 §States and Transitions：
+#   「**schema 版本状态** …… 作用域 = **全局**（整个数据集的 schema 走到哪一版）」
+version: 1
+
+# ── 迁移表（Core Rule ④：显式映射，不是通用魔法）────────────────────────────
+# 形状： "<from>-><to>": [ {op: add|remove|rename|transform, ...}, ... ]
+# v1 是初版 ⇒ 没有 vN→vN+1 可迁。**留一个空表而不是删掉这个键** ——
+# 空表是"已作出的判断（初版无迁移）"，缺键是"还没想"。这两者必须能区分（A2 的写法先例）。
+migrations: {}
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# 表 1/3 · 元素表
+# 来源：A1 §Core Rules ③ + `scripts/element_table.gd` 的字段与 `validate()`
+# ════════════════════════════════════════════════════════════════════════════
+tables:
+
+  element_table:
+    resource: "res://data/element_table.tres"
+    script: "res://scripts/element_table.gd"
+    fields:
+      - name: schema_version
+        type: int
+        required: true
+        # ★ A4 的 §Edge Cases 明写「schema 版本号【缺失】→ 拒绝载入（不得当成 v1 猜）」
+        #   ⇒ 所以这个字段**必须显式写在 .tres 里**，不接受"用默认值补上"。
+        #   实现上靠"默认值是 0（= 无版本）"来兑现 —— 见 element_table.gd。
+        constraint: "== 本文件的 version"
+      - name: schema_fingerprint
+        type: String
+        required: true
+        constraint: "== 本文件算出的内容指纹（Core Rule ⑦）"
+      - name: elements
+        type: Dictionary
+        required: true
+        key_type: StringName              # 元素符号，如 &"H"
+        value_fields:
+          - name: atomic_mass
+            type: float
+            required: true
+            # A1 的 §Edge Cases B：原子量为 0 或缺失 → **拒绝整表导入并指出坏在哪一行**。
+            # 理由：除以 0 会污染**整张**表，而那张表是 8 个下游的基座。
+            constraint: "> 0"
+          - name: group
+            type: int
+            required: true
+            constraint: "0..4"            # 0-3 = 海水四组；4 = 矿脉元素（不属海水四组）
+          - name: name
+            type: String
+            required: true
+            constraint: "非空"             # 百科（B7）要用它
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# 表 2/3 · 化合物与步骤表
+# 来源：A2 §Core Rules ①②③④⑤ + `scripts/compound_data.gd` 的字段与文档注释
+# ════════════════════════════════════════════════════════════════════════════
+
+  compound_table:
+    resource: "res://data/reactions.tres"
+    script: "res://scripts/compound_data.gd"
+    fields:
+      - name: schema_version
+        type: int
+        required: true
+        constraint: "== 本文件的 version"
+      - name: schema_fingerprint
+        type: String
+        required: true
+        constraint: "== 本文件算出的内容指纹"
+      - name: steps
+        type: Array
+        required: true
+        item_type: step_record
+    records:
+
+      # 一条步骤 = 一个记录 = 「输入 → 条件区间 → 输出」（A2 的 ②）。
+      # ★ **分支不是特例**：分支 = 同一输入的**多条记录**，各自带不重叠的条件区间。
+      step_record:
+        fields:
+          - {name: id, type: String, required: true}
+          - {name: inputs, type: Dictionary, required: true, value_type: int}   # 组成式 key -> 整数原子数
+          - {name: outputs, type: Dictionary, required: true, value_type: int}
+          - {name: conditions, type: Array, required: true, item_type: condition_record}
+          # 越界分支置 true / 或给一个灾难 id（对应 B5 的灾难类型）。
+          # A3 的 ⑧：A3 只**标记**灾难，后果与连锁归 B5。
+          - {name: disaster, type: "String|bool", required: true}
+
+      # 条件包里的一项 = 一个受控旋钮的一段区间。
+      condition_record:
+        fields:
+          # ★ 只**引用** A1 的 param_* 名，**不得另立定义**（A2 的 ⑦ / A1 的权威）。
+          - {name: param, type: StringName, required: true, constraint: "必须 ∈ param_schema.knobs 的名字集合"}
+          # 最优带 [opt_lo, opt_hi) —— **左闭右开**（A2 的 ③）。
+          - {name: opt_lo, type: float, required: true}
+          - {name: opt_hi, type: float, required: true, constraint: "> opt_lo"}
+          # 越界点：<= brk_lo 或 >= brk_hi 就是灾难。
+          - {name: brk_lo, type: float, required: true, constraint: "<= opt_lo"}
+          - {name: brk_hi, type: float, required: true, constraint: ">= opt_hi"}
+          - {name: coef_lo, type: float, required: true, constraint: "0..1"}
+          - {name: coef_hi, type: float, required: true, constraint: "0..1"}
+          # ★ 偏移带出的是**另一组同样配平的输出**，**不是"附加产物"** ——
+          #   因为 A2 的 ④ 是硬约束（配平必须成立）：若副产物是附加的，原子就不守恒了。
+          - {name: alt, type: Dictionary, required: true, value_type: int}
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# 表 3/3 · 参数（旋钮）schema
+# 来源：A1 §Tuning Knobs A（**设计权威**）；本节的 `knobs` 是它的机器可读转写，
+#       与 `design/registry/entities.yaml` 的 `param_*` 条目同源。
+# ════════════════════════════════════════════════════════════════════════════
+
+  param_schema:
+    authority: "design/gdd/element-pool.md §Tuning Knobs A"
+    record_fields:
+      - {name: name, type: StringName, required: true, constraint: "以 param_ 开头"}
+      - {name: value, type: "Dictionary|String", required: true}
+      - {name: unit, type: String, required: true}
+      - {name: referenced_by, type: Array, required: true, constraint: ">= 1 项"}
+    knobs:
+      - {name: param_temperature,     kind: continuous, min: 20,   max: 200, default: 80,   unit: "°C"}
+      - {name: param_pressure,        kind: continuous, min: 1,    max: 40,  default: 6,    unit: "atm"}
+      - {name: param_residence_time,  kind: continuous, min: 0.5,  max: 15,  default: 4.0,  unit: "相对"}
+      - {name: param_catalyst,        kind: enum, options: [无催化剂, 镍网, 铂片],                                          default: 铂片,             unit: "枚举 3"}
+      - {name: param_anode_material,  kind: enum, options: [石墨阳极, 钌铱涂层钛_析氯型, 铱钽涂层钛_析氧型],                  default: 铱钽涂层钛_析氧型,  unit: "枚举 3"}

@@ -24,6 +24,18 @@ jobs:
         with:
           lfs: true
 
+      # ⚠️ 顺序有讲究：**契约一致性先查**。
+      # 若有人改了 design/schema/contract.yaml 却忘了重新生成
+      # scripts/generated/schema_contract.gd，那么生成物是【旧指纹】，
+      # 于是测试会以"指纹不符"的形式红 —— 而那个报错指向的是测试，不是真正的错处。
+      # 先跑这一条，报错就直接指着"生成物与真相源不一致"。
+      # 它需要 Python 3 + PyYAML；这是**开发期依赖**，不进运行时
+      #（运行时零 YAML 依赖正是"开发期生成"这个选择的理由，见 A4 Core Rule ②）。
+      - name: Schema contract is in sync with its truth source
+        run: |
+          python -m pip install --quiet pyyaml
+          python tools/gen_schema_contract.py --check
+
       # godot-version 必须是完整发行版号（4.7.2），VERSION.md 里的 "4.7" 不是。
       # version: installed 表示【跑 addons/ 里已提交的那份 gdUnit4】——
       # 不加它，action 会删掉那份并装最新版，而最新版可能和我们的测试不匹配。

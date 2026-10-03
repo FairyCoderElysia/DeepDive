@@ -15,7 +15,10 @@ const H2O := {&"H": 2, &"O": 1}
 
 func _new_data() -> CompoundData:
 	var d = CD.new()
-	d.schema_version = CD.SCHEMA_VERSION
+	# ★ 版本号与指纹的来源是【A4 的契约头】（真相源 = design/schema/contract.yaml）——
+	#   原先这里写的是 `CD.SCHEMA_VERSION`，而那个常量已删：它是同一个事实的第二处定义。
+	d.schema_version = SchemaContract.SCHEMA_VERSION
+	d.schema_fingerprint = SchemaContract.SCHEMA_FINGERPRINT
 	return d
 
 
@@ -394,13 +397,17 @@ func test_binary_round_trip_preserves_the_table() -> void:
 ## ⚠️ 这与 A1 **不一样**：A1 过 JSON 是**值真的坏了**（int64 掉精度，而 `==` 还说相等）。
 ## **⇒ 同一条纪律换一个系统，失效方式会不一样 —— 所以验收不能照抄。**
 func test_json_channel_corrupts_types_but_not_behaviour() -> void:
-	var via = JSON.parse_string(JSON.stringify({"v": DATA.schema_version, "steps": DATA.steps}))
+	var via = JSON.parse_string(JSON.stringify(
+		{"v": DATA.schema_version, "fp": DATA.schema_fingerprint, "steps": DATA.steps}))
 	# ① 类型确实坏了
 	assert_int(typeof(via["v"])).is_equal(TYPE_FLOAT)
 	assert_int(typeof(via["steps"][0]["conditions"][0]["param"])).is_equal(TYPE_STRING)
 	# ② 但功能没坏 —— 校验照样过、求值照样对
+	#    ⚠️ 2026-10-03（A4 落地）：这里多了一个 `fp` —— 因为"缺指纹"现在是**校验错误**。
+	#    这条修正是被测试逼出来的：加了一个必填字段，**每个构造它的地方都得跟着补**。
 	var d = CD.new()
 	d.schema_version = int(via["v"])
+	d.schema_fingerprint = String(via["fp"])
 	d.steps = via["steps"]
 	assert_array(d.validate({})).is_empty()
 	assert_str(String(d.evaluate(d.steps[0], {&"param_temperature": 50.0})["band"])).is_equal("optimal")

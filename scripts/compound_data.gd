@@ -17,10 +17,24 @@ extends Resource
 ## 关于旋钮：**旋钮的权威定义在 A1**（③ 参数 schema）。本表只**引用** `param_*` 名字，
 ## 不另立定义 —— 否则又是"同一事实两处定义"。
 
-const SCHEMA_VERSION := 1
+## ★ A4：**schema 版本号**。
+##
+## ⚠️ **这里原先有一个 `const SCHEMA_VERSION := 1`，已删掉** —— 它是"同一个事实的第二处定义"：
+##    A4 把真相源定成 `design/schema/contract.yaml`，版本号由它经生成器出一道
+##    `SchemaContract.SCHEMA_VERSION`。两处各写一个 `1` 的话，它们可以各自悄悄改。
+##
+## **默认值是 `0`（= "无版本"的哨兵），不是 `1`。** 依据 A4 的 §Edge Cases：
+## 「schema 版本号**缺失** → 拒绝载入（**不得当成 `v1` 猜** —— 猜错会静默损坏数据）」。
+## 若默认写成 `1`，"忘了在 .tres 里写版本号"就会被静默补成 v1 —— 那正是这条边界要防的。
+## ⇒ "缺版本号"由 A2 自己的 `validate()` 报，而"版本号不对"由 A4 的契约头比（见 A4 §Core Rules ②）。
+@export var schema_version: int = 0
 
-## schema 版本。**必须存在** —— 与 A1 同口径（否则后期改表要改所有下游）。
-@export var schema_version: int = SCHEMA_VERSION
+## ★ A4：**schema 内容指纹**（Core Rule ⑦）。默认空串同样是"缺失"的哨兵。
+##
+## 光比版本号抓不住最危险的一类：**改了 schema 却忘了升版本号** ——
+## 那时版本检查会通过、迁移不会跑，数据被**静默地**按新 schema 解读。
+## 指纹是"人可能忘、而数据自己不会忘"的那一份证据。
+@export var schema_fingerprint: String = ""
 
 ## 步骤记录表。每条的字段见下（`scripts/` 里以本文件为唯一权威）：
 ##   id            : String        —— 人类可读的标识（日志/百科用）
@@ -92,8 +106,14 @@ static func atom_totals(composition: Dictionary) -> Dictionary:
 ## `known_elements`：A1 已登记的元素集合（StringName -> true）。传空 = 跳过这项校验。
 func validate(known_elements: Dictionary = {}) -> Array:
 	var errors: Array = []
-	if schema_version != SCHEMA_VERSION:
-		errors.append("schema_version = %d，本内核只认 %d" % [schema_version, SCHEMA_VERSION])
+	# ★ A4：**"缺版本号"与"版本号不对"是两件事**。这里只管前者 ——
+	#   "对不对"要拿 A4 的契约头（`SchemaContract.check_head`）比，因为那需要真相源。
+	#   这样切是为了**依赖方向不出现环**：A4 → A2（A4 校验 A2 的表），
+	#   所以 A2 不该反过来引用 A4 的常量；由**加载数据的那一处**（组装点）去调 A4。
+	if schema_version <= 0:
+		errors.append("这张表没有声明 schema 版本号（读到 %d）—— 拒绝载入：猜一版会静默损坏数据（A4 §Edge Cases）" % schema_version)
+	if schema_fingerprint == "":
+		errors.append("这张表没有声明 schema 内容指纹 —— 只比版本号抓不住『改了 schema 却忘了升版本号』（A4 Core Rule ⑦）")
 
 	var seen_ids := {}
 	var by_input := {}      # 输入 key -> 该输入的记录列表（用于查区间重叠）
@@ -226,16 +246,20 @@ func validate(known_elements: Dictionary = {}) -> Array:
 ## **二进制**通道。与 A1 同口径（`var_to_bytes`），供 B16 存档 / 工艺卡之外的持久化使用。
 ## 注意：`.tres` 本身就是一种序列化（给编辑器用）；本函数是给【运行时存档】用的。
 func to_bytes() -> PackedByteArray:
-	return var_to_bytes({"v": schema_version, "steps": steps})
+	return var_to_bytes({"v": schema_version, "fp": schema_fingerprint, "steps": steps})
 
 
 static func from_bytes(data: PackedByteArray) -> CompoundData:
 	var d = bytes_to_var(data)
-	assert(d is Dictionary and int(d.get("v", -1)) == SCHEMA_VERSION,
-		"schema 版本不匹配 —— 必须走迁移（A4），不得静默继续")
+	# ⚠️ 这里**只断言"回来了"**（存在 + 类型对）—— **不再断言"是本内核认的那一版"**：
+	#   那件事需要真相源（A4 的契约头），而 A2 不该反过来依赖 A4（会成环）。
+	#   ⇒ "对不对"由**加载数据的组装点**调 `SchemaContract.check_head()` 去判。
+	assert(d is Dictionary and int(d.get("v", 0)) > 0,
+		"回来的数据没有 schema 版本号 —— 拒绝载入：猜一版会静默损坏数据（A4 §Edge Cases）")
 	assert(typeof(d["v"]) == TYPE_INT, "版本字段回来时不是 int —— 说明有人把它过了一遍 JSON")
 	var out = CompoundData.new()
 	out.schema_version = int(d["v"])
+	out.schema_fingerprint = String(d.get("fp", ""))
 	out.steps = (d["steps"] as Array).duplicate(true)
 	return out
 
