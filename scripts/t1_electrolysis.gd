@@ -95,23 +95,16 @@ func _step() -> void:
 func _run_reaction(batches: int) -> void:
 	var water_key := CompoundData.composition_key(WATER)
 
-	# ⚠️ **已知缺口（本轮接线时暴露）**：A3 的 ④ 明写"分支判定归 A3"，
-	#   而我的 ReactionSolver 目前要求调用方先把【分支 step】挑好再交给它。
-	#   -> 这里由场景代挑（与 A5 将来要做的同一件事）；**这条缺口已记进断点**。
+	# ★ **分支判定归 A3**（A3 的 ④：调 A2 的判据，不重新定义条件语义）——
+	#   所以场景只把【候选】交进去，**不自己挑**。
+	#   （上一版这里有一份重复的分支挑选逻辑；A3 补上 ④ 之后它就成了重复 —— 已删。）
 	var branches := TABLE.steps_for({water_key: 2})
-	var chosen: Dictionary = {}
-	for s: Dictionary in branches:
-		if TABLE.evaluate(s, {&"param_temperature": _temp})["band"] != "disaster":
-			chosen = s
-	if chosen.is_empty():
-		push_warning("温度 %.1f 落在所有分支的越界区 —— 那是灾难；本切片只告警" % _temp)
+	if branches.is_empty():
 		return
-
-	# ★ 交给 A3：一台机器、一个 step、当前条件
 	var machine := {
 		"id": &"electrolyzer",
 		"priority": 0,
-		"step": chosen,
+		"branches": branches,                 # ← A3 会按当前温度选一条
 		"conditions": {&"param_temperature": _temp},
 	}
 	# A3 的 solve 是【纯】的；化合物账就是它读的 available
