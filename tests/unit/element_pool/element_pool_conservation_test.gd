@@ -175,3 +175,72 @@ func test_seawater_ratio_via_element_table_is_two() -> void:
 	})
 	var ratio: float = float(units[&"H"]) / float(units[&"O"])
 	assert_float(ratio).is_between(1.98, 2.02)
+
+# ============================================================ 稀疏语义（A1 的 ② + §Edge Cases）
+
+## ★ A1 明写：稀疏池里「**从未出现**」与「**存在且为 0**」必须**语义等价**
+##   ——「否则相等判定会出鬼」。
+func test_never_seen_element_is_equivalent_to_zero() -> void:
+	var pool = ElementPoolScript.new()
+	# 从未放过的元素：读它必须是 0（而不是报错、也不是 -1）
+	assert_int(pool.count(&"Fe")).is_equal(0)
+	# 放一个再取干净 —— 现在它是"存在且为 0"
+	pool.add(&"Fe", 5)
+	pool.take(&"Fe", 5)
+	assert_int(pool.count(&"Fe")).is_equal(0)
+	# 两者对一切可观测操作必须等价：总量、对账、序列化后的形状
+	assert_int(pool.total()).is_equal(0)
+	assert_bool(pool.conservation_ok()).is_true()
+	var restored = ElementPoolScript.from_bytes(pool.to_bytes())
+	assert_int(restored.count(&"Fe")).is_equal(0)      # 稀疏：0 不会被存下来，读回来仍是 0
+	assert_int(restored.total()).is_equal(0)
+
+
+## 稀疏标记：**0 的条目不该出现在存档里**（否则"只存出现过的元素"就名存实亡）
+func test_zero_entries_are_not_serialized() -> void:
+	var pool = ElementPoolScript.new()
+	pool.add(&"H", 10)
+	pool.add(&"O", 3)
+	pool.take(&"O", 3)                                  # O 归零 -> 不该被存
+	var d = bytes_to_var(pool.to_bytes())
+	var atoms: Dictionary = d["atoms"]
+	assert_bool(atoms.has(&"H")).is_true()
+	assert_bool(atoms.has(&"O")).is_false()
+
+
+# ============================================================ 序列化（A1 的 ⑥ + 验收 3）
+
+## ★ 验收 3：**二进制通道必须通过**（且必须断言 `typeof()`，不能只比 `==`）
+func test_binary_round_trip_is_bit_exact_for_huge_int64() -> void:
+	var pool = ElementPoolScript.new()
+	# 2^53 + 1 —— 超出 float 能精确表示的范围（JSON 在这就坏）
+	pool.add(&"H", 9007199254740993)
+	pool.add(&"O", 123456789012345)
+	pool.accumulate(&"m", &"H", 12345)
+	var restored = ElementPoolScript.from_bytes(pool.to_bytes())
+	# 值必须逐位相同
+	assert_int(restored.count(&"H")).is_equal(9007199254740993)
+	assert_int(restored.count(&"O")).is_equal(123456789012345)
+	# **类型也必须仍是 int** —— 这一条是只比 == 会漏掉的那条
+	assert_int(typeof(restored.count(&"H"))).is_equal(TYPE_INT)
+	# 累加器与净导入账也必须一起回来（否则恢复后对账会立刻失败）
+	assert_int(restored.residual(&"m", &"H")).is_equal(pool.residual(&"m", &"H"))
+	assert_bool(restored.conservation_ok()).is_true()
+
+
+## ★★ 验收 3 的另一半：**JSON 通道【必须失败】**（它是反例，不是备选方案）
+##
+## 这条测试的价值在于**它把陷阱本身钉住**：JSON 的坏是【静默的】——
+## 值变成了 float，而 `==` 仍然说"相等"。
+## 所以任何"只比 =="的断言都会放过它；**只有 `typeof()` 能抓住**。
+func test_json_channel_must_fail_because_it_silently_becomes_float() -> void:
+	var big := 9007199254740993                      # 2^53 + 1
+	var via_json = JSON.parse_string(JSON.stringify({"v": big}))["v"]
+
+	# ① 它已经坏了：类型从 INT 变成了 FLOAT
+	assert_int(typeof(via_json)).is_equal(TYPE_FLOAT)
+	# ② 而 == 会说"相等" —— 这正是"静默"的含义
+	assert_bool(via_json == big).is_true()
+	# ③ 真正能抓住它的是整数化后的不等
+	assert_int(int(via_json)).is_equal(9007199254740992)   # 少了 1
+	# ④ 所以 A1 的 ⑥ 是必须的：池【绝不能】走 JSON

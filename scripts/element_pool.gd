@@ -180,5 +180,47 @@ func conservation_report() -> Dictionary:
 	return out
 
 
+# ---------------------------------------------------------------- 序列化（A1 的 ⑥）
+
+## 存档格式版本。**它必须存在** —— 否则后期加元素/改字段要改所有下游（A1 的 ②）。
+const SAVE_VERSION := 1
+
+## A1 的 ⑥：**二进制**（`var_to_bytes`）+ 稀疏标记。**不得用 JSON。**
+##
+## 为什么（2026-10-03 在 Godot 4.7.2 实测）：
+##   · `var_to_bytes` 逐位精确 —— `9007199254740993` 往返不变。
+##   · JSON 会把它变成 `9007199254740992.0`（**且 `typeof()` 从 INT 变 FLOAT**），
+##     而 **`==` 仍然返回 true** —— 所以 JSON 的坏是【静默的】。
+##   ⇒ 这就是为什么本函数存在，而测试里 JSON 那条必须**失败**。
+func to_bytes() -> PackedByteArray:
+	# 稀疏标记：只存出现过的元素（不存 0）—— 与 ②「元素渐进」一致
+	var atoms := {}
+	for e: StringName in _atoms:
+		if int(_atoms[e]) != 0:
+			atoms[e] = int(_atoms[e])
+	return var_to_bytes({
+		"v": SAVE_VERSION,
+		"atoms": atoms,
+		"residual": _residual,
+		"net": _net_imported,
+	})
+
+
+## 从二进制恢复。**类型必须仍是 int** —— 断言 `typeof()`，不只比 `==`。
+static func from_bytes(data: PackedByteArray) -> ElementPool:
+	var d = bytes_to_var(data)
+	assert(d is Dictionary and d.get("v", -1) == SAVE_VERSION,
+		"存档版本不匹配 —— 必须走迁移（A4），不得静默继续")
+	var pool := ElementPool.new()
+	pool._atoms = (d["atoms"] as Dictionary).duplicate()
+	for e: StringName in pool._atoms:
+		# ★ 关键断言：值必须是 int。JSON 那条路会在这里变成 float（而 == 看不出来）
+		assert(typeof(pool._atoms[e]) == TYPE_INT,
+			"元素 %s 反序列化后不是 int —— 说明有人把它过了一遍 JSON" % e)
+	pool._residual = (d["residual"] as Dictionary).duplicate(true)
+	pool._net_imported = (d["net"] as Dictionary).duplicate()
+	return pool
+
+
 func _bump_net(element_id: StringName, delta: int) -> void:
 	_net_imported[element_id] = int(_net_imported.get(element_id, 0)) + delta
