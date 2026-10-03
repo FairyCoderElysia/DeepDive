@@ -1,6 +1,6 @@
 # A1 · 元素池与计量系统（Element Pool & Metrology）
 
-> **Status**: Draft（骨架 —— 已定的写清，未定的标 `[待定]`）
+> **Status**: **Approved**（2026-10-02 评审通过 —— 见 `design/gdd/reviews/element-pool-review-log.md`）
 > **Category**: Core · **Layer**: Foundation · **Priority**: T1
 > **Depends On**: **无** —— 本系统是全项目**唯一零依赖**的系统
 > **被依赖**: **8 个**（A2 · A3 · A4 · **B3** · B6 · B13 · B16 · C2）→ **它是全项目基座**

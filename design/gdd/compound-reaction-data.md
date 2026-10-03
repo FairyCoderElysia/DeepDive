@@ -1,6 +1,6 @@
 # A2 · 化合物与反应数据表（Compound & Reaction Data Tables）
 
-> **Status**: Draft（骨架 —— 已定的写清，未定的标 `[待定]`）
+> **Status**: **Approved**（2026-10-02 评审通过 —— 见 `design/gdd/reviews/compound-reaction-data-review-log.md`）
 > **Category**: Core · **Layer**: Foundation · **Priority**: T1
 > **Depends On**: **A1**（元素池与计量）—— 化合物的标识符来自元素表
 > **被依赖**: **A3 反应求解器** · **A4 Schema 双解释器与契约校验** · **B7 百科**
