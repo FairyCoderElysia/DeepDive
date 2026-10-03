@@ -59,7 +59,7 @@
 | 23 | B17 新手引导 / 教程 | Meta | T2 | Not Started | — | A5, B1, B7, B8 |
 | 24 | B18 设置与无障碍 `(inferred)` | Meta | T3 | Not Started | — | B11 |
 | 25 | B19 性能预算与管网 tick | Technical | T1 | Not Started | — | A5 |
-| 26 | C1 深度分层与通量阶梯 | World | T3 | **In Design** | design/gdd/depth-layers.md | A5, B4 |
+| 26 | C1 深度分层与通量阶梯 | World | T3 | **Approved** | design/gdd/depth-layers.md | A5, B4 |
 | 27 | C2 矿脉与开采 | World | T3 | Not Started | — | C1, A1 |
 | 28 | C3 飞船与零件 | World | T3 | Not Started | — | A5, A3, C2 |
 | 29 | C4 程序生成 | World | T3 | Not Started | — | C1, C2 |
@@ -233,9 +233,9 @@
 |--------|-------|
 | Total systems identified | **29** |
 | Design docs started | **15** |
-| Design docs reviewed | **14**（Core 段 11 个 + B1 · B7 · B8，Verdict 均 APPROVED） |
+| Design docs reviewed | **15**（Core 段 11 个 + B1 · B7 · B8 · C1，Verdict 均 APPROVED） |
 | Design docs approved | 0 |
-| **T1（垂直切片）系统已设计** | 13 / **16**（Core 段 11 个 + B1 · B7 已评审 APPROVED；**C1 的「表层通量天花板」是 T1 义务**，已写进 depth-layers.md） |
+| **T1（垂直切片）系统已设计** | 13 / **16**（Core 段 11 个 + B1 · B7 已评审 APPROVED；**C1 的「表层通量天花板」是 T1 义务**，已评审并写进 depth-layers.md） |
 | **T2（MVP）系统已设计** | 0 / **7** |
 | **T3（完整愿景）系统已设计** | 0 / **6** |
 
