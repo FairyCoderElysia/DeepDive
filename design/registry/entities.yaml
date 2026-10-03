@@ -90,7 +90,7 @@ formulas:
     variables: [可用量_i, 需求量_i]
     output: "推进份数（分数，由 A1 的余数累加器整数量化）"
     meaning: "比值最小的那一项决定推进 —— 这就是'谁先耗尽'"
-    referenced_by: [reaction-solver]
+    referenced_by: [reaction-solver, process-graph]
 
   - name: priority_tier_allocation
     description: 层内分配 —— 抢料的语义（A3 定义、A5 使用）。
@@ -110,7 +110,7 @@ formulas:
       - "同优先级 = 按需求比例等分（公平）；不同优先级 = 抢（玩家可配）—— 两层语义各司其职"
       - "等分必须【层内联立】，不能逐台分配 —— 逐台分配会让结果依赖处理顺序，违反确定性"
     determinism: "顺序由存档数据（优先级）决定，不需要随机种子 —— 比轮转+种子更强"
-    referenced_by: [reaction-solver]
+    referenced_by: [reaction-solver, process-graph]
 
   - name: contract_validation
     description: 契约校验判定式 —— 两侧对同一份数据的解释结果必须与期望值一致。
@@ -133,6 +133,30 @@ formulas:
     output: "迁移后的数据（或拒绝）"
     danger: "remove 是最危险的原语 —— 若被删字段承载物质或状态，删掉就是丢信息（P2 边界，发生在时间维度上）"
     referenced_by: [schema-dual-interpreter]
+
+  - name: continuous_flow_integration
+    description: 连续流速率的积分 —— 累积量是积出来的，不是"按批累加"。
+    expression: "累积量(t) = 累积量(t-1) + 速率 × dt"
+    variables: [速率, dt, 累积量]
+    applies_to: "结垢等一切累积量；清洗 = 一段停机时间（期间速率为 0），不是'算作一批'"
+    forbidden: "不得写成按批累加 —— 那是 T0 原型的模型，概念文档明确禁止渗入任何系统 GDD"
+    testable: "同一张图连续运行，结果必须随速率【连续变化】；若退化成按批结算，会出现台阶"
+    referenced_by: [process-graph]
+
+  - name: graph_evaluation
+    description: 工艺图的求值 —— 外层环不动点 + 内层 A3 优先级层不动点（嵌套）。
+    expression: |
+      重复：
+        沿环传播流量 -> 每个被访问的优先级层内部解一次 A3 的层内不动点
+        若所有节点流量都不再变化 -> 稳定退出；否则继续
+      达迭代上限仍未稳定 -> 采用当前值 + 告警（不得静默）
+    variables: [图结构, 环, 优先级层]
+    output: "每节点本 tick 的流量与状态"
+    nesting_risk: |
+      这是【嵌套】迭代：最坏工作量 ≈ 环迭代轮数 × 层数 × 层内迭代轮数。
+      它不是两个独立的迭代 —— 已标为 B19 的第一号预算问题。
+    boundary: "A5 只应用 A3 的语义，不重定义求值顺序"
+    referenced_by: [process-graph]
 
 constants:
 
@@ -268,13 +292,13 @@ constants:
     status: "暂定"
     note: "层内分配的不动点迭代上限。达到上限仍未稳定 -> 采用当前结果 + 告警（不得静默）。"
     tradeoff: "稳定性 vs 性能"
-    referenced_by: [reaction-solver]
+    referenced_by: [reaction-solver, process-graph]
 
   - name: CONTENTION_CONVENTION
     value: "层间抢（玩家可配优先级）；层内按需求比例等分"
     note: "多台机器争同一池料的语义约定。A3 定义、A5 使用（A5 的图求值语义来自 A3）。"
     requirement: "优先级必须【可存档】（丢了等于玩家的创作丢了）且【可见】（不可解释的饥饿就是噪音）"
-    referenced_by: [reaction-solver]
+    referenced_by: [reaction-solver, process-graph]
 
   # ---------- A4 引入的常量 ----------
 
@@ -288,3 +312,28 @@ constants:
     note: "完整校验的触发时机（离线/开发期）。运行时只做轻量版本检查（版本不匹配则拒绝载入）。"
     rationale: "完整校验的价值在于在开发者手上拦住错误，不在于在玩家机器上 —— 放运行时等于把开发期问题的代价推给玩家"
     referenced_by: [schema-dual-interpreter]
+
+  # ---------- A5 引入的常量 ----------
+
+  - name: GRAPH_SCALE
+    value: { edges: "100–500", nodes: "50–200" }
+    status: "暂定"
+    note: "工艺图的典型规模。依据概念文档 Key Technical Challenges #1 的措辞「数百管段下的 tick 开销」。"
+    owner_hint: "上限交 B19 定（B19 只依赖 A5）"
+    referenced_by: [process-graph]
+
+  - name: BLOCKING_SEMANTICS
+    value: "产出无处可去 -> 阻塞上游 + 告警；绝不丢弃"
+    note: "全项目唯一的'无处可去'语义。A1 已定（元素饱和 -> 上游阻塞），A5 沿用同一条（产物接不住 -> 上游阻塞）。"
+    why_one_semantic: |
+      两处必须一致，否则玩家会遇到两种"产不出来"：一种卡住（可理解）、一种东西消失了（不可理解且违反 P2）。
+      同一件事在不同系统里有两种行为，是本项目反复踩的那类坑。
+    referenced_by: [process-graph]
+
+  - name: LOOP_FIXPOINT_ITERATION_CAP
+    value: 8
+    unit: "轮"
+    status: "暂定"
+    note: "环上不动点的迭代上限（与 A3 的层内上限同量级）。达上限 -> 采用当前值 + 告警。"
+    needs: "需与 B19 联调（它决定一个 tick 装得下多少）"
+    referenced_by: [process-graph]
