@@ -181,6 +181,30 @@ formulas:
     not_provided: "全维视图（5 维无法呈现；强行降到 2 维会丢掉玩家正在调的那一维）"
     referenced_by: [parameters-cost-surface]
 
+  - name: oxygen_balance
+    description: 氧的收支 —— 本作唯一的记账式。
+    expression: |
+      净收支 = 产氧速率 - (工业耗氧 + 生命维持耗氧 + 存贮耗氧 + 销毁耗氧)
+      存量  += 净收支 × dt          ← 速率积分（连续流，不是按批结算）
+    variables: [产氧速率, 工业耗氧, 生命维持耗氧, 存贮耗氧, 销毁耗氧, 存量]
+    output: "净收支（速率）与存量（两者都要：速率答'往里还是往外'，存量答'还能撑多久'）"
+    unit: "氧"
+    referenced_by: [oxygen-economy]
+
+  - name: oxygen_priority_allocation
+    description: 氧紧张时的三级分配（F-B4-1）—— 保证"紧绷但不会终结"。
+    expression: |
+      当 存量 < 阈值:  按【生命维持 > 产氧链本身 > 其他工业】分配
+    variables: [存量, 阈值]
+    why_three_tiers: |
+      若"工业让位于生命维持"被直译成"工业全停"，会死锁：
+      氧耗尽 -> 所有工业设备停摆 -> 【制氧设备也是工业设备】-> 它也停 -> 永远无法产氧 -> 不可恢复。
+      而这违反全项目"所有状态可复原"的纪律（P5 无时限、不能有死档）。
+      第二级"产氧链本身"的存在【就是为了避免死锁】。
+    not_three_pools: "它是【同一数字上的分配顺序】，不是三个池 —— 拆池会拆掉支柱"
+    same_mechanism: "与 A3 的优先级机制同构（层间抢料 + 层内联立），不需要新机制"
+    referenced_by: [oxygen-economy]
+
 constants:
 
   # ---------- 计量与口径 ----------
@@ -374,3 +398,24 @@ constants:
     note: "来自 Core Mechanics #6（无货币）与 #5（氧的双角色：生命维持 + 工业能源，同一个数字）。"
     why_hard: "概念文档注明：'这条不是少做一个系统，而是一条会管住所有其它系统的硬约束'"
     referenced_by: [parameters-cost-surface]
+
+  # ---------- B4 引入的常量 ----------
+
+  - name: OXYGEN_ROLES
+    value: "生命维持 + 工业能源（助燃物）—— 同一个数字"
+    note: "Core Mechanics #5。本作唯一的硬通货（Core Mechanics #6：无货币、无市场、无售价）。"
+    hard_constraint: "不得拆成两个池 —— 拆了就拆掉了整个张力的支点（这是本系统第一号不可违反的约束）"
+    referenced_by: [oxygen-economy]
+
+  - name: FREE_OXYGEN_DEFINITION
+    value: "游离的 O2 —— 即 A2 化合物表里的 O2 化合物存量"
+    note: "水里的氧不算（不可呼吸、不可助燃）。"
+    implementation_note: "不需要改 A1 或 A3：A1 的池记元素原子数（含水里那些氧），A2 的化合物表区分 O 以 H2O 还是 O2 存在。"
+    teaches: "'水里有氧却不能呼吸'不是特例规则，而是化合物模型本来就支持的区分 —— 它会成为一个真实的教学时刻"
+    referenced_by: [oxygen-economy]
+
+  - name: OXYGEN_ZERO_BEHAVIOR
+    value: "按三级优先分配（生命维持 > 产氧链 > 其他工业）；工厂大面积停摆但人不死"
+    note: "用户拍板。与 P5「无时限、无强制终点」一致，且【可复原】。"
+    on_zero_outlets: "在'不可用'档位上只剩存贮/销毁，两者都要氧 —— 且【没有'低价卖掉'这个出口】"
+    referenced_by: [oxygen-economy]
