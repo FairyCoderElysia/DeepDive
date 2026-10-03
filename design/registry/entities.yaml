@@ -374,6 +374,24 @@ formulas:
       而本项目已实测过 6 次这类漂移事故。
     referenced_by: [ore-veins]
 
+  - name: ship_parameters
+    description: 飞船的三个参数（推力 / 质量 / 防护）—— 由【零件 + 工艺】决定。
+    expression: |
+      推力 = Σ(零件的推力贡献)        ← 贡献来自【工艺造出来的那些产物】
+      质量 = Σ(零件质量) + 结构质量
+      防护 = f(零件的防护贡献)
+    no_geometry: "式子里【没有几何项】—— 形状不参与任何计算。这就是'系统级而非几何级'在数值上的形式。"
+    referenced_by: [ship-and-parts]
+
+  - name: ship_flyable_threshold
+    description: 「能飞」的门槛 —— 真实 + 事前可见。
+    expression: "能飞 <=> 推力 >= 质量 × g（一类门槛）；且设计界面上【实时显示】这个判定"
+    why_both: |
+      P2 要求"参数是真的"（推力/质量/防护不是装饰）；失败模式表要求"不能是暗算"（门槛必须可预判）。
+      -> 两条合起来 = 真门槛 + 事前可见。
+    playability: "玩家在设计时就能算'我这船飞不飞得起来'—— 然后决定要不要继续投入"
+    referenced_by: [ship-and-parts]
+
 constants:
 
   # ---------- 计量与口径 ----------
@@ -928,3 +946,52 @@ constants:
     danger: "缺一条 P4 就不成立：只有种类 -> 拿完关键元素就回表层；只有通量 -> 可以用海水慢慢堆到后期"
     source: "用户明确约束：'深海不是选择项，是必须项……有些元素需要深海矿脉才能获取，后期大规模获取元素也必须依靠深海矿脉。'"
     referenced_by: [ore-veins]
+
+  # ---------- C3 引入的常量 ----------
+
+  - name: SHIP_SYSTEM_LEVEL_FREEDOM
+    value: "零件 10–15 种 + 3 个组合维度（推力 / 质量 / 防护）；零件由【既有工艺】造出来"
+    note: "★ 这是概念文档 Risk #3 那个'范围黑洞'的落定值 —— 它被指派给用户，本轮已定。"
+    why_this_scale: |
+      概念文档自己把"零件 + 工艺 -> 推力/质量/防护"写成了三个维度；
+      而 Risk #3 的要点正是【把刻度写下来】（否则它会被"要不……"侵蚀）。
+      这个量级既不是"换一层皮"，也不至于变成系统级 CAD。
+    referenced_by: [ship-and-parts]
+
+  - name: NO_GEOMETRY_IN_CALCULATION
+    value: "形状【不参与任何计算】—— 表达自由落在系统层，不落在几何层"
+    note: "反支柱 NOT 几何级飞船编辑器的可测形式。"
+    what_you_can_do: "你画什么形状都行（因为形状不参与计算），但参数会 —— 这就是④反过来定义的边界"
+    referenced_by: [ship-and-parts]
+
+  - name: SHIP_MANIFEST_FORM
+    value: "清单 = 物理必需项（硬的）+ 具体零件（玩家选）"
+    reconciles: |
+      概念文档两句看起来会撞的话：「飞船清单上每一项都在喊你必须下去」（清单硬、要深处材料）
+      vs「它是玩家自己定义的验收目标，不是任务门」（终点由玩家定）。
+      同时为真的方式：【物理是硬的，而达成方式是玩家的】——
+      必需项不是"开发商要你造这 5 个东西"，而是"一艘能飞的船必须有推进"。
+    referenced_by: [ship-and-parts]
+
+  - name: SHIP_IS_CHEMISTRY_TERMINAL
+    value: "飞船是【化学链的终点】，不是另开一个建造系统 —— 零件是用既有工艺造出的化学产物"
+    why: |
+      反支柱说"你造的零件 + 你选的工艺决定参数"，而三个依赖（A5/A3/C2）说明：
+      零件不是"用木材和铁锭造"的，而是用工艺造出来的化学产物。
+      -> 飞船是整棵产物树的终端产品；这也解释了为什么它是"表达感的终极容器"。
+    danger: "若做成独立的'零件合成'系统，它就会漂到这套化学游戏之外，而 C2 的'矿石要炼'也白做了"
+    referenced_by: [ship-and-parts]
+
+  - name: SHIP_IS_SINK_PLUS_DESIGN
+    value: "飞船 = 【一个汇（在管网里）】+ 【一个设计界面（在管网外）】—— 装配不是操作原语"
+    sibling: "与 C2 的口径同构：'开采不是化学操作 -> 矿脉是源节点，不是原语'"
+    two_reasons: "① 装配不是化学操作（原语是化学操作）· ② 它不参与连续流（飞船没有上下游、不需被接住）"
+    consequence: "喂料断掉不阻塞上游（它是汇，不是流的一部分）"
+    danger: "若做成原语，会造出一个既不是化学操作、又不参与流的机器，并把飞船拉回'另一个建造系统'"
+    referenced_by: [ship-and-parts]
+
+  - name: SHIP_IS_NOT_A_QUEST_GATE
+    value: "它不是任务门 —— 不阻塞任何主流程，玩家可以永远不造（'定居型巨构'是正当玩法）"
+    source: "概念文档 line 254"
+    consequence: "其它所有系统都【不得】依赖 '玩家会造飞船' 这个假设"
+    referenced_by: [ship-and-parts]
