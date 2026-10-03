@@ -154,6 +154,23 @@ func validate(known_elements: Dictionary = {}) -> Array:
 		if (s.get("outputs", {}) as Dictionary).is_empty():
 			errors.append("%s：没有 outputs" % wid)
 
+		# --- 空组成式 / 原子数为 0（§Edge Cases）：**拒绝** ---
+		#     ① 组成式必须非空 ② 只记实际存在的元素（不得出现 `H0` 这种条目）
+		var allkeys: Array = []
+		allkeys.append_array((s.get("inputs", {}) as Dictionary).keys())
+		allkeys.append_array((s.get("outputs", {}) as Dictionary).keys())
+		for c3: Dictionary in (s.get("conditions", []) as Array):
+			allkeys.append_array((c3.get("alt", {}) as Dictionary).keys())
+		for k3: String in allkeys:
+			if String(k3) == "" or String(k3) == "∅":
+				errors.append("%s：出现了空组成式 —— 组成式必须非空" % wid)
+				continue
+			for seg2: String in String(k3).split("|"):
+				var mm := _parse_segment(seg2)
+				if int(mm[1]) <= 0:
+					errors.append("%s：组成式 %s 里「%s」的个数是 %d —— 只记实际存在的元素（不得写 0 或负数）" % [
+						wid, k3, seg2, int(mm[1])])
+
 		# --- ★ F-A2-1：Σ副产物系数 ≤ 1 ---
 		var coef_sum := 0.0
 		for c: Dictionary in (s.get("conditions", []) as Array):

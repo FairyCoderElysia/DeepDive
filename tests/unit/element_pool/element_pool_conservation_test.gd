@@ -244,3 +244,53 @@ func test_json_channel_must_fail_because_it_silently_becomes_float() -> void:
 	# ③ 真正能抓住它的是整数化后的不等
 	assert_int(int(via_json)).is_equal(9007199254740992)   # 少了 1
 	# ④ 所以 A1 的 ⑥ 是必须的：池【绝不能】走 JSON
+
+# ============================================================ A1 §Edge Cases 的补测
+
+## ★ A1 的承诺：「**任何元素计数恒 ≥ 0** —— 任何产生负数的路径都是 bug，必须被对账拦住」
+##   而"结构上不可能"这件事**必须被测试**，否则它只是一个说法。
+func test_element_count_can_never_go_negative() -> void:
+	var pool = ElementPoolScript.new()
+	# 从未有过 -> 是 0，不是负数
+	assert_int(pool.count(&"H")).is_equal(0)
+	assert_bool(pool.count(&"H") >= 0).is_true()
+	# 取超过持有量 -> 只给到 0，**绝不越过**
+	pool.add(&"H", 5)
+	assert_int(pool.take(&"H", 999)).is_equal(5)
+	assert_int(pool.count(&"H")).is_equal(0)
+	assert_bool(pool.count(&"H") >= 0).is_true()
+	# 对账也必须仍然通过（"负物质"是对账要拦的东西）
+	assert_bool(pool.conservation_ok()).is_true()
+
+
+## ★ A1 的 §Edge Cases：「**需求小于 1/SCALE** → 累加器永远攒不够一个整原子 →
+##   **接受它**（那本来就是'还没反应完'）」—— 即它既不该报错，也不该丢。
+func test_demand_smaller_than_one_scale_is_accepted_and_kept() -> void:
+	var pool = ElementPoolScript.new()
+	var tiny := 1                       # 1/SCALE 个原子，最小的非零需求
+	var delivered := 0
+	for i in 100:
+		delivered += pool.accumulate(&"m", &"H", tiny)
+	assert_int(delivered).is_equal(0)                  # 攒不够就是 0（不是错误）
+	assert_int(pool.residual(&"m", &"H")).is_equal(100)  # 而它【没丢】—— 100 份都还在残留里
+	assert_int(pool.count(&"H")).is_equal(0)            # 也不该进池
+
+
+## ★ A1 的 §Edge Cases B：原子量缺失/为 0 -> **拒绝整表并指出坏在哪一行**。
+func test_element_table_rejects_missing_or_zero_atomic_mass_and_names_the_row() -> void:
+	var ET := preload("res://scripts/element_table.gd")
+	var good = preload("res://data/element_table.tres")
+	assert_array(good.validate()).is_empty()
+
+	# 造一张坏表：把 O 的原子量设成 0
+	var bad = ET.new()
+	bad.elements = good.elements.duplicate(true)
+	bad.elements[&"O"]["atomic_mass"] = 0.0
+	var errs := bad.validate()
+	assert_int(errs.size()).is_greater(0)
+	assert_bool(" ".join(errs).contains("O")).is_true()      # 必须指出是哪个元素
+
+	# 缺字段也算坏
+	var bad2 = ET.new()
+	bad2.elements = {&"Xx": {"group": 0, "name": "某元素"}}   # 没有 atomic_mass
+	assert_int(bad2.validate().size()).is_greater(0)

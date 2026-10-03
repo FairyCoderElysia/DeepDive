@@ -406,3 +406,26 @@ func test_json_channel_corrupts_types_but_not_behaviour() -> void:
 	assert_str(String(d.evaluate(d.steps[0], {&"param_temperature": 50.0})["band"])).is_equal("optimal")
 	# ③ 所以二进制通道仍然是【必须的】—— 它保住了类型；而 JSON 的代价此刻只是"类型不干净"，
 	#    但一旦将来某个字段变成大整数（例如把原子数写进表），它就会像 A1 那样【静默掉精度】。
+
+## ★ A2 的 §Edge Cases：「**空组成式 / 某元素原子数为 0** -> 拒绝
+##   —— 组成式必须非空，且只记实际存在的元素」。
+func test_empty_composition_is_rejected() -> void:
+	var d := _new_data()
+	var s := _ok_step()
+	# 输入里塞一个空组成式
+	s["inputs"] = {"": 2}
+	s["outputs"] = {CD.composition_key({&"H": 2}): 2}
+	d.steps = [s]
+	var errs := d.validate()
+	assert_int(errs.size()).is_greater(0)
+	assert_bool(" ".join(errs).contains("空组成式")).is_true()
+
+
+func test_zero_atom_count_in_key_is_rejected() -> void:
+	var d := _new_data()
+	var s := _ok_step()
+	# 手写一个含 0 个数的组成式（composition_key 不会生成这种，但数据文件可能手改坏）
+	s["inputs"] = {"H0|O1|O1": 2}
+	d.steps = [s]
+	var errs := d.validate()
+	assert_int(errs.size()).is_greater(0)

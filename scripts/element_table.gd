@@ -45,5 +45,28 @@ func mass_pct_to_atom_units(mass_pct: Dictionary) -> Dictionary:
 	return out
 
 
+## 整表校验（A1 的 §Edge Cases B）：**原子量为 0 或缺失 -> 拒绝整表导入，并指出坏在哪一行。**
+##
+## 理由（A1 原文）：除以 0 会污染**整张**元素表，而那张表是 **8 个下游**的基座。
+## 返回错误列表（空 = 通过）。
+func validate() -> Array:
+	var errors: Array = []
+	if elements.is_empty():
+		errors.append("元素表是空的")
+	for sym: StringName in elements:
+		var e: Dictionary = elements[sym]
+		var m := float(e.get("atomic_mass", -1.0))
+		if m <= 0.0:
+			errors.append("元素「%s」的 atomic_mass = %s（必须是 > 0 的数）—— 缺它会让『质量→原子』除以 0 或静默算错" % [sym, e.get("atomic_mass", "<缺失>")])
+		var g := int(e.get("group", -1))
+		if g < Group.WATER or g > Group.SULFATE:
+			# 注：矿脉元素用 4（不属海水四组），所以这里放宽到 0..4
+			if g < 0 or g > 4:
+				errors.append("元素「%s」的 group = %d（必须在 0..4）" % [sym, g])
+		if String(e.get("name", "")) == "":
+			errors.append("元素「%s」缺 name（百科 B7 要用它）" % sym)
+	return errors
+
+
 func _require(symbol: StringName) -> void:
 	assert(elements.has(symbol), "元素表里没有 %s —— 内核不允许猜元素" % symbol)
