@@ -432,6 +432,14 @@ formulas:
     key_distinction: "'世界走慢' 是【游戏内时间】变慢（渲染仍流畅、每个 tick 仍精确），不是【帧率】掉"
     referenced_by: [performance-budget]
 
+  - name: diagnosis_composition
+    description: 诊断的构成 —— 现象 -> 原因 -> 修法（三句，而不是一张图表）。
+    expression: "现象 -> 原因（归因字段） -> 修法（六种之一）"
+    why_this_order: |
+      概念文档的三问（哪里堵了/为什么堵/哪一步放热失控）是【诊断式】的（发生了什么），
+      而玩家的下一个动作是"我该做什么" -> 两者都需要，而顺序固定。
+    referenced_by: [diagnosis-feedback]
+
 constants:
 
   # ---------- 计量与口径 ----------
@@ -1113,3 +1121,49 @@ constants:
     value: "T1 交付 = 标杆场景 + 真机实测数字 + 预算框架，不承诺具体性能数字"
     why: "若 T1 写确定值，就是把 A1 明确警告过的那个假设【钉成事实】"
     referenced_by: [performance-budget]
+
+  # ---------- B10 引入的常量 ----------
+
+  - name: ATTRIBUTION_RECORD_FIELDS
+    value: { 谁: "哪台机器/哪条边", 哪个: "旋钮/接法/通道", 偏到哪: "段/程度", 何时开始: "【游戏内时间】" }
+    extensible: "各系统可加自己的扩展字段（如 B5 的因果链）"
+    why_minimal: |
+      本项目已实测过 6 次"同一事实两处定义然后漂移"的事故；而"归因的形状"正是一个会被三处各定义一次的东西
+      （三个上游都说了"必须记录"，谁都没定义）。若放任各自定义，B10 就要适配三套、未来再加一套。
+      -> 统一最小字段集 = 只允许一个"共同的那部分"，扩展点让各系统加自己的。
+    maps_to_three_questions: "哪里堵了<-谁 · 为什么堵<-哪个+偏到哪 · 哪一步放热失控<-B5 的因果链（扩展字段）"
+    referenced_by: [diagnosis-feedback]
+
+  - name: SIX_KINDS_OF_STOPPED
+    value: |
+      A3 对账锁        -> 确认 + 重算基线
+      B2 结垢失效      -> 清洗（一段停机时间）
+      A5 阻塞          -> 腾出容量
+      B5 灾难          -> 修（成本随严重度）
+      C1 管路超限破裂  -> 换管 / 降压
+      A5 干涸          -> 接回上游
+    note: "六种停的【修法互不通用】—— 所以'我的机器停了'这一句话必须被拆成六句。"
+    grouping: "按【修法】分组（在这里与按原因分组恰好一对一的，但标签是玩家要的那个答案）"
+    referenced_by: [diagnosis-feedback]
+
+  - name: DIAGNOSIS_PUSH_GRADING
+    value: "严重（灾难/失效/对账锁）-> 主动提示；轻微（效率下降/接近上限）-> 可查"
+    standard: "分界线 = '玩家现在必须做什么'：必须立刻做 -> 推送；可以等一下 -> 可查"
+    why: |
+      本作是连续流、世界不停（无时限、不暂停）-> 主动推送不能打断玩家；
+      而 B5 要求灾难"壮观"+"可诊断"-> 必须被立即注意到。分级是唯一同时满足两者的答案。
+    referenced_by: [diagnosis-feedback]
+
+  - name: DIAGNOSIS_TIMESTAMP_IS_GAME_TIME
+    value: "归因的时间戳必须用【游戏内时间】，不能用现实时间"
+    why: |
+      B19 已定"超预算 -> 世界走慢"（tick 变长）。若用现实时间，
+      同一段因果在走慢时会显示成"持续了很久"，而实际游戏内只过了几秒 ->
+      那会让诊断在玩家最需要它的时候（工厂很大、世界很慢）恰好失真。
+    referenced_by: [diagnosis-feedback, performance-budget]
+
+  - name: NO_POST_HOC_RECONSTRUCTION
+    value: "归因必须【实时记录】，不得事后重建"
+    note: "这是三条上游契约（A3/B2/B5）的同一句话：若上游不记录归因，诊断就无从下手。"
+    consequence: "B10 不产生归因，它只【消费】归因 —— 所以它的正确性取决于三处上游是否按同一形状记录"
+    referenced_by: [diagnosis-feedback]
