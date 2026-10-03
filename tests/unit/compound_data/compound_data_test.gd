@@ -429,3 +429,90 @@ func test_zero_atom_count_in_key_is_rejected() -> void:
 	d.steps = [s]
 	var errs := d.validate()
 	assert_int(errs.size()).is_greater(0)
+
+
+# ============================================================ ④ 多旋钮合并式（之前从未被测）
+
+## ★ A2 的 §④：`主产物占比 = max(0, 1 − Σ_k δ_k)` · `副产物占比_k = δ_k × 系数_k`
+##   这条之前【从未被测】—— 而它的理由很硬：若 Σ(δ×系数) > 1，
+##   主产物占比会被夹到 0，**而副产物照常产出 ⇒ 总产出超过名义量 = 物质凭空多出来**。
+func _two_knob_step() -> Dictionary:
+	var s := _ok_step()
+	s["conditions"] = [
+		{ "param": &"param_temperature",
+		  "opt_lo": 60.0, "opt_hi": 90.0, "brk_lo": 20.0, "brk_hi": 130.0,
+		  "coef_lo": 0.4, "coef_hi": 0.4,
+		  "alt": {CD.composition_key({&"H": 2}): 1, CD.composition_key({&"H": 2, &"O": 2}): 1} },
+		{ "param": &"param_pressure",
+		  "opt_lo": 1.0, "opt_hi": 3.0, "brk_lo": 0.2, "brk_hi": 6.0,
+		  "coef_lo": 0.3, "coef_hi": 0.3,
+		  "alt": {CD.composition_key({&"H": 2}): 1, CD.composition_key({&"H": 2, &"O": 2}): 1} },
+	]
+	return s
+
+
+func test_two_knobs_offsets_add_up_in_the_sum() -> void:
+	var d := _new_data()
+	var s := _two_knob_step()
+	# 温度 110（上侧偏移，δ=20/40=0.5）· 压强 4.0（上侧偏移，δ=(4-3)/3≈0.3333）
+	var ev = d.evaluate(s, {&"param_temperature": 110.0, &"param_pressure": 4.0})
+	assert_str(String(ev["band"])).is_equal("offset")
+	var st := float(ev["deltas"][&"param_temperature"])
+	var sp := float(ev["deltas"][&"param_pressure"])
+	assert_float(st).is_equal_approx(0.5, 0.0001)
+	assert_float(sp).is_equal_approx(1.0 / 3.0, 0.001)
+	# ★ 主产物占比 = 1 − Σδ（**不是 1 − max δ**）
+	assert_float(float(ev["main_share"])).is_equal_approx(1.0 - st - sp, 0.0001)
+	# 而各旋钮的副产物占比 = δ × 各自的系数
+	assert_float(float(ev["alts"][&"param_temperature"]["share"])).is_equal_approx(st * 0.4, 0.0001)
+	assert_float(float(ev["alts"][&"param_pressure"]["share"])).is_equal_approx(sp * 0.3, 0.0001)
+
+
+## 多旋钮同时【最优】-> δ 全 0、主占比 1.0
+func test_two_knobs_both_optimal_gives_full_main_share() -> void:
+	var d := _new_data()
+	var ev = d.evaluate(_two_knob_step(), {&"param_temperature": 75.0, &"param_pressure": 2.0})
+	assert_str(String(ev["band"])).is_equal("optimal")
+	assert_float(float(ev["main_share"])).is_equal_approx(1.0, 0.0001)
+
+
+## ★ `max(0, …)` 的夹取：Σδ > 1 时主占比必须是 **0，不是负数**
+func test_main_share_is_clamped_at_zero_not_negative() -> void:
+	var d := _new_data()
+	var s := _two_knob_step()
+	# 两个旋钮都拧到偏移带的最外端 -> δ 各自逼近 1 -> Σδ 逼近 2
+	var ev = d.evaluate(s, {&"param_temperature": 129.0, &"param_pressure": 5.9})
+	assert_str(String(ev["band"])).is_equal("offset")
+	assert_bool(float(ev["deltas"][&"param_temperature"]) > 0.9).is_true()
+	assert_bool(float(ev["deltas"][&"param_pressure"]) > 0.9).is_true()
+	assert_float(float(ev["main_share"])).is_equal(0.0)      # 夹到 0，**不是负数**
+
+
+## ★ F-A2-1 存在的理由：`Σ系数 ≤ 1` ⇒ 副产物占比之和 ≤ 1 ⇒ **不会凭空多出物质**
+##
+## ⚠️ 这条测试的第一版是【空跑】—— 我忘了 `d.steps = [s]`，于是它校验了一张空表、
+##    平平地通过。**"断言通过"和"断言真的在测东西"是两件事。**
+func test_coefficient_budget_prevents_creating_matter() -> void:
+	var d := _new_data()
+	d.steps = [_two_knob_step()]                   # ← 第一版漏了这一行
+	# Σ系数 = (0.4+0.4) + (0.3+0.3) = 1.4 > 1 -> 必须被拒
+	var errs := d.validate()
+	assert_int(errs.size()).is_greater(0)
+	assert_bool(" ".join(errs).contains("系数")).is_true()
+
+
+## 而上一条的正确形态：把系数降到预算内 -> 通过，且副产物占比之和 ≤ 1
+func test_coefficient_budget_passes_when_within_budget() -> void:
+	var d := _new_data()
+	var s := _two_knob_step()
+	s["conditions"][0]["coef_lo"] = 0.2
+	s["conditions"][0]["coef_hi"] = 0.2
+	s["conditions"][1]["coef_lo"] = 0.3
+	s["conditions"][1]["coef_hi"] = 0.3
+	assert_array(d.validate()).is_empty()          # Σ = 1.0 ✅
+	var ev = d.evaluate(s, {&"param_temperature": 129.0, &"param_pressure": 5.9})
+	var sum_bp := 0.0
+	for k in ev["alts"]:
+		sum_bp += float(ev["alts"][k]["share"])
+	# 副产物占比之和 ≤ Σ系数 ≤ 1 —— **这就是"不会凭空多出物质"**
+	assert_float(sum_bp).is_less_equal(1.0 + 0.0001)

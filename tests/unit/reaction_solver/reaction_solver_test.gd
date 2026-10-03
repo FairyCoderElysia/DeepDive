@@ -178,3 +178,39 @@ func test_quantization_never_over_delivers() -> void:
 	# 推进 0.5 批，但实际只扣【整数个】：≤ 1 个 H₂（不会超发，也不会扣小数）
 	assert_int(int(res["took"].get(H, 0))).is_less_equal(1)
 	assert_bool(int(avail[H]) >= 0).is_true()      # 绝不出现负库存
+
+
+# ============================================================ A3 的其余边界
+
+## ★ A2 明写：「循环步骤（A→B→A）**A2 允许**（可逆与循环在真实化学里存在）；
+##   **终止性由 A3 负责**」—— 而 A3 的终止性是【结构性】的：
+##   **每个 tick 每台机器只求值一次**，所以自环/回喂不会让它转圈。
+func test_self_loop_terminates_a_single_evaluation() -> void:
+	var t := _table()
+	var W := _H2O()
+	var H := _H2()
+	# 一台机器吃水、产氢；而它产的氢又被自己当成输入（自环）
+	var s := _step("loop", {W: 2, H: 1}, {H: 3})
+	# 注意：这条不是真化学（只用于测终止性），所以**显式标注**它不参与守恒断言
+	var avail := {W: 4, H: 2}
+	var r = RS.new().solve([_machine("loop", s)], avail, t)
+	# 关键：**它返回了**（没有转圈），且每台机器只有一个结果
+	assert_int((r["results"] as Array).size()).is_equal(1)
+
+
+## ★ F-A3-2 的"不得静默"：迭代次数必须被报告出来，收敛时 warned = false
+func test_iteration_count_is_reported_and_normal_case_does_not_warn() -> void:
+	var t := _table()
+	var s := _water_step("m")
+	var r = RS.new().solve([_machine("a", s), _machine("b", s)], {_H2(): 4, _O2(): 4}, t)
+	assert_bool(r.has("iterations")).is_true()
+	assert_bool(r.has("warned")).is_true()
+	# 正常的等分应当很快收敛
+	var first: int = int((r["iterations"] as Dictionary).values()[0])
+	assert_int(first).is_less_equal(preload("res://scripts/reaction_solver.gd").MAX_ITERATIONS)
+	assert_bool(bool(r["warned"])).is_false()
+
+
+## 迭代上限是 A3 的硬常量（用户拍板"迭代到不动点，带上限"）
+func test_max_iterations_is_eight() -> void:
+	assert_int(preload("res://scripts/reaction_solver.gd").MAX_ITERATIONS).is_equal(8)
