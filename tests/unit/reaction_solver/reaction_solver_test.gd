@@ -214,3 +214,47 @@ func test_iteration_count_is_reported_and_normal_case_does_not_warn() -> void:
 ## 迭代上限是 A3 的硬常量（用户拍板"迭代到不动点，带上限"）
 func test_max_iterations_is_eight() -> void:
 	assert_int(preload("res://scripts/reaction_solver.gd").MAX_ITERATIONS).is_equal(8)
+
+
+# ============================================================ ④ 分支判定（归 A3）
+
+## ★ A3 的 ④：「分支判定：调 A2 的判据。**A3 只实现，不重新定义条件语义**」。
+##
+## ⚠️ 本条对应的实现第一版失败过，根因：我只改了 `_commit_one`，
+##    没改 `_layer_input_keys` / `_input_of` —— 那两处也直接读 `m["step"]`，
+##    所以拿到 branches 时取不到输入键。
+##    **教训：改一处"取值方式"时，要把【所有读同一字段的地方】一起改。**
+func test_a3_picks_the_branch_by_conditions() -> void:
+	var t := _table()
+	var W := _H2O()
+	var low := _step("low_T", {W: 2}, {W: 2})
+	low["conditions"][0]["opt_lo"] = 40.0; low["conditions"][0]["opt_hi"] = 60.0
+	low["conditions"][0]["brk_lo"] = 20.0; low["conditions"][0]["brk_hi"] = 60.0
+	low["conditions"][0]["coef_lo"] = 0.5; low["conditions"][0]["coef_hi"] = 0.0
+	var high := _electrolysis_step("high_T")
+	high["conditions"][0]["opt_lo"] = 60.0; high["conditions"][0]["opt_hi"] = 110.0
+	high["conditions"][0]["brk_lo"] = 60.0; high["conditions"][0]["brk_hi"] = 140.0
+	high["conditions"][0]["coef_lo"] = 0.0; high["conditions"][0]["coef_hi"] = 0.5
+
+	var m_hi := {"id": &"m", "priority": 0, "branches": [low, high],
+				 "conditions": {&"param_temperature": 80.0}}
+	var res_hi: Dictionary = (RS.new().solve([m_hi], {W: 10}, t)["results"] as Array)[0]
+	assert_bool(int(res_hi["advanced_scaled"]) > 0).is_true()
+	assert_bool((res_hi["made"] as Dictionary).has(_H2())).is_true()
+
+	var m_lo := {"id": &"m", "priority": 0, "branches": [low, high],
+				 "conditions": {&"param_temperature": 50.0}}
+	var res_lo: Dictionary = (RS.new().solve([m_lo], {W: 10}, t)["results"] as Array)[0]
+	assert_bool((res_lo["made"] as Dictionary).has(_H2())).is_false()
+
+
+func test_a3_reports_disaster_when_all_branches_are_out_of_bounds() -> void:
+	var t := _table()
+	var W := _H2O()
+	var low := _step("low_T", {W: 2}, {W: 2})
+	low["conditions"][0]["opt_lo"] = 40.0; low["conditions"][0]["opt_hi"] = 60.0
+	low["conditions"][0]["brk_lo"] = 20.0; low["conditions"][0]["brk_hi"] = 60.0
+	var m := {"id": &"m", "priority": 0, "branches": [low],
+			  "conditions": {&"param_temperature": 500.0}}
+	var r = RS.new().solve([m], {W: 10}, t)
+	assert_str(String((r["results"][0] as Dictionary)["disaster"])).is_not_equal("")

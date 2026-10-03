@@ -23,6 +23,10 @@ const MAX_ITERATIONS := 8
 ## 同层内机器多于这个数时，仍然全部处理 —— 但顺序必须【稳定】（见 ⑥）
 const AVAILABLE_KEY_ZERO := 0
 
+## 只给 _layer_input_keys / _input_of 用的数据表（它们在 _solve_layer 入口被注入，
+## 早于 _commit_one —— 所以不能复用那里的 table）
+var _table_for_keys: CompoundData = null
+
 ## ★ 求解过程中的【工作副本】—— 刻意做成**实例字段**而不是层层传参。
 ## 为什么：本项目的守恒是零容差的，而"共享状态被谁在什么时候改了"必须没有歧义。
 ## 层层传一个 Dictionary 时，一旦某一层拿到的是副本，扣减就会【静默失效】——
@@ -71,6 +75,7 @@ func solve(machines: Array, available: Dictionary, table: CompoundData) -> Dicti
 # ---------------------------------------------------------------- 层的求解（F-A3-2 的落点）
 
 func _solve_layer(layer: Array, avail: Dictionary, table: CompoundData) -> Dictionary:
+	_table_for_keys = table
 	var results: Array = []
 	var warned := false
 	var iterations := 0
@@ -153,7 +158,10 @@ func _solve_layer(layer: Array, avail: Dictionary, table: CompoundData) -> Dicti
 ## **整数量化走 A1 的余数累加器**（A3 的 ③：不得自创舍入方式）——
 ## 这里用 A1 的池来承载累加器（每台机器 + 每种化合物一个）。
 func _commit_one(m: Dictionary, advance: float, avail: Dictionary, table: CompoundData) -> Dictionary:
-	var step: Dictionary = m["step"]
+	# ★ **分支判定归 A3**（A3 的 ④：调 A2 的判据，不重新定义条件语义）。
+	#   调用方给一条 step 或一组 branches —— 后者才是"一台机器是反应中一个或多个步骤"
+	#   那件事的落点：**同一输入在不同条件下走哪条分支，由 A3 选**。
+	var step: Dictionary = _pick_branch(m, table)
 	var conditions: Dictionary = m.get("conditions", {})
 	var scale: int = ElementPool.SCALE
 	# 推进量 -> 放大整数（floor：只会少搬、绝不超搬）
@@ -213,6 +221,24 @@ static func apply(result: Dictionary, available: Dictionary) -> void:
 		available[k] = int(available.get(k, 0)) + int(result["made"][k])
 
 
+## 从候选里挑出与当前条件匹配的那一条分支。**这是 A3 的 ④。**
+## 判据来自 A2：最优带 [a,b) 命中哪条就走哪条；全部越界 -> 用第一条（disaster 交给调用方）。
+## ⚠️ `table` 走【参数】而不是实例字段 —— 上一轮我用字段注入，结果在调用顺序上拿不到它。
+func _pick_branch(m: Dictionary, table: CompoundData) -> Dictionary:
+	var branches: Array = m.get("branches", [])
+	if branches.is_empty():
+		return m["step"]
+	var cond: Dictionary = m.get("conditions", {})
+	# 稳定顺序（按 id）—— 保证确定性（A3 的 ⑥）
+	var sorted_b := branches.duplicate()
+	sorted_b.sort_custom(func(x: Dictionary, y: Dictionary) -> bool:
+		return String(x.get("id", "")) < String(y.get("id", "")))
+	for b: Dictionary in sorted_b:
+		if table.evaluate(b, cond)["band"] != "disaster":
+			return b
+	return sorted_b[0]
+
+
 func _empty_result(m: Dictionary) -> Dictionary:
 	return {"id": m["id"], "advanced_scaled": 0, "took": {}, "made": {},
 			"band": "idle", "disaster": "", "carried_remainder": false,
@@ -244,7 +270,7 @@ func _group_by_priority(machines: Array) -> Array:
 func _layer_input_keys(layer: Array) -> Array:
 	var keys := {}
 	for m: Dictionary in layer:
-		for k: String in ((m["step"] as Dictionary).get("inputs", {}) as Dictionary):
+		for k: String in ((_pick_branch(m, _table_for_keys) as Dictionary).get("inputs", {}) as Dictionary):
 			keys[k] = true
 	var out := keys.keys()
 	out.sort()
@@ -252,4 +278,4 @@ func _layer_input_keys(layer: Array) -> Array:
 
 
 func _input_of(m: Dictionary, key: String) -> int:
-	return int(((m["step"] as Dictionary).get("inputs", {}) as Dictionary).get(key, 0))
+	return int(((_pick_branch(m, _table_for_keys) as Dictionary).get("inputs", {}) as Dictionary).get(key, 0))
