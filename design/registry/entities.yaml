@@ -732,3 +732,60 @@ constants:
     consequence: "若百科里出现一个追溯不到上游的数，那就是一处越界"
     failure_mode: "它不会算错（因为不算），它只会『说错』—— 而那是误导，比算错更难发现"
     referenced_by: [encyclopedia]
+
+  # ---------- B8 引入的常量（B8 没有数值公式 —— 它的内容是【触发条件】）----------
+
+  - name: L1_UNLOCK_ORDER
+    value: |
+      开局        -> 温度 T + 催化剂     （玩家会问："条件不同，结果真的会不一样吗？"）
+      跑通第一条线 -> 压强 P             （"还能更快、或更干净一点吗？"）
+      撞上瓶颈     -> 停留时间 τ          （"是我反应时间不够吗？"）
+      第一次氯污染 -> 阳极材料            （"氯是从哪来的？我怎么挡住它？"）
+    source: "L1（2026-10-02，用户已接受）"
+    principle: "旋钮在玩家【产生疑问的那一刻】才出现，而不是开局就摆出五个滑杆"
+    referenced_by: [progressive-unlock]
+
+  - name: UNLOCK_TRIGGER_TWO_PATHS
+    value: "解锁 = 撞上它（处境信号，自动）∨ 去查它（在百科里查到 = 把问题问出口）"
+    why_second_path_needed: |
+      "产生疑问"有两种发生方式：被问题砸到（处境），或自己想到那个问题（查询）。
+      而"去查"正是 B7 的界面 -> 【在百科里查到一条 = 已经把那个问题问出口了】。
+      这条让 B7 与 B8 咬上：百科不只是知识库，它同时是"主动解锁"的入口。
+    side_effect: "它顺带解决了'老玩家/二周目想提前拿旋钮'的问题 —— 去查一下就行，不需要另做跳过功能"
+    referenced_by: [progressive-unlock]
+
+  - name: UNLOCK_IS_VISIBILITY_ONLY
+    value: "解锁 = 看见 + 可调；未解锁的旋钮【仍按默认值生效】"
+    note: "A6 给 B8 的契约原话：不得假设不可见 = 不生效（解锁只是'看见'）。"
+    consequence: "见 STARTING_SOLUTION_ALIGNMENT —— 它有一个不显然的后果"
+    referenced_by: [progressive-unlock]
+
+  - name: STARTING_SOLUTION_ALIGNMENT
+    value: "百科的起跑线解必须在【未解锁旋钮的默认值】下成立"
+    why: |
+      玩家照百科做第一条线时，那几个旋钮是不可见的、但【在生效】。
+      若起跑线解不是在这些默认值下算的，玩家照做会得到不一样的结果，
+      而他会得出一个错误的结论："百科不准"（真相是"你看不见的那个旋钮也在起作用"）。
+    who_does_what: "B8 给出默认值且它们就是 B7 算解时用的值；B7 的起跑线解在这些默认值下成立"
+    nature: |
+      这是"不可见但生效"最不显然的后果：它不影响模拟（模拟一直是对的），
+      它影响【玩家对百科的信任】。而"不能是暗算"在这里的形态就是：
+      【玩家照做，就该得到说的那个结果。】
+    referenced_by: [progressive-unlock, encyclopedia]
+
+  - name: B8_IS_A_LISTENER
+    value: "B8 是【监听者】，不是判定者 —— 它不自己判断玩家的处境"
+    signal_sources: "跑通第一条线<-A5 · 撞上瓶颈<-A3+B3 · 第一次氯污染<-B2 · 去查它<-B7"
+    why: "否则 B8 会被实现成一个自己判断'玩家撞上瓶颈了吗'的系统，而它手里没有那些数据"
+    referenced_by: [progressive-unlock]
+
+  - name: UNLOCK_ORDER_FIXEDNESS
+    value: "主线固定，事件型可提前"
+    why_from_source: |
+      L1 那张表【自己就混了两种类型】：跑通第一条线 / 撞上瓶颈 = 进程型（"你走到哪了"）；
+      第一次碰见氯污染 = 事件型（随时可能发生，与进度无关）。
+      -> 这不是另加的设计，而是那张表自己编码的。
+    danger_if_not: |
+      若不这样，提前碰见氯污染的玩家会面对一个无法回答的问题
+      （"氯是从哪来的"却无旋钮可用）—— 那直接违背"旋钮在疑问出现时出现"这条原则。
+    referenced_by: [progressive-unlock]
