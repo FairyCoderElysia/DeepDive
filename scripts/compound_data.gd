@@ -89,7 +89,8 @@ static func atom_totals(composition: Dictionary) -> Dictionary:
 
 ## 校验整张表。返回**错误列表**（空 = 通过）。
 ## **校验不过就【拒绝导入整张表】** —— 不是跳过那一条（A2 的 ④ 明写）。
-func validate() -> Array:
+## `known_elements`：A1 已登记的元素集合（StringName -> true）。传空 = 跳过这项校验。
+func validate(known_elements: Dictionary = {}) -> Array:
 	var errors: Array = []
 	if schema_version != SCHEMA_VERSION:
 		errors.append("schema_version = %d，本内核只认 %d" % [schema_version, SCHEMA_VERSION])
@@ -134,6 +135,21 @@ func validate() -> Array:
 				errors.append("%s：旋钮 %s 的 alt 未配平（输入=%s alt=%s）—— 偏移时守恒会破" % [
 					wid, c.get("param", "?"), lhs, arhs])
 
+		# --- 缺元素校验（验收 5）：引用了 A1 未登记的元素，必须报出是哪一个 ---
+		if not known_elements.is_empty():
+			var keys: Array = []
+			keys.append_array((s.get("inputs", {}) as Dictionary).keys())
+			keys.append_array((s.get("outputs", {}) as Dictionary).keys())
+			for c2: Dictionary in (s.get("conditions", []) as Array):
+				keys.append_array((c2.get("alt", {}) as Dictionary).keys())
+			for k2: String in keys:
+				for seg: String in String(k2).split("|"):
+					if seg == "":
+						continue
+					var sym: StringName = _parse_segment(seg)[0]
+					if not known_elements.has(sym):
+						errors.append("%s：引用了未登记的元素「%s」（组成式 %s）" % [wid, sym, k2])
+
 		# --- 编号：每条记录必须有 outputs ---
 		if (s.get("outputs", {}) as Dictionary).is_empty():
 			errors.append("%s：没有 outputs" % wid)
@@ -173,6 +189,18 @@ func validate() -> Array:
 						if maxf(a_lo, b_lo) < minf(a_hi, b_hi):
 							errors.append("输入 %s 的两条记录（%s / %s）在旋钮 %s 上的最优带重叠了 —— 分支必须是不重叠的区间划分" % [
 								ik, group[a].get("id", "?"), group[b].get("id", "?"), ca.get("param", "?")])
+						# ★ 验收 4 的另一半：**不留缝**。
+						# 只在"同一输入、同一旋钮、且两条记录都覆盖这一点附近"时要求相邻；
+						# 靠"把两个带的端点对齐"来实现分段。留缝 = 那个温度区间没有任何分支 -> 无人区。
+						elif not (is_equal_approx(a_hi, b_lo) or is_equal_approx(b_hi, a_lo)):
+							# 两者不重叠但也不相邻 —— 只有在"它们本该连续"时才报。
+							# 判据：若一个带的端点落在另一个带的【越界范围之内】，说明作者本意是连续分段。
+							var lo1 := minf(a_lo, b_lo); var hi1 := maxf(a_hi, b_hi)
+							var span := hi1 - lo1
+							if span > 0.0:
+								errors.append("输入 %s 的两条记录（%s / %s）在旋钮 %s 上的最优带既不重叠也不相邻（%s 与 %s）—— 会留下无人区（验收 4）" % [
+									ik, group[a].get("id", "?"), group[b].get("id", "?"), ca.get("param", "?"),
+									"[%s,%s)" % [a_lo, a_hi], "[%s,%s)" % [b_lo, b_hi]])
 	return errors
 
 

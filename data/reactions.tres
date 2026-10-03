@@ -7,19 +7,41 @@ script = ExtResource("1_vkv8g")
 steps = [{
 "conditions": [{
 "alt": {
+"H2|O1": 2
+},
+"brk_hi": 60.0,
+"brk_lo": 20.0,
+"coef_hi": 0.0,
+"coef_lo": 0.5,
+"opt_hi": 60.0,
+"opt_lo": 40.0,
+"param": &"param_temperature"
+}],
+"disaster": "h2_o2_deflagration",
+"id": "water_electrolysis_low_T",
+"inputs": {
+"H2|O1": 2
+},
+"outputs": {
+"H2": 1,
+"H2|O2": 1
+}
+}, {
+"conditions": [{
+"alt": {
 "H2": 1,
 "H2|O2": 1
 },
-"brk_hi": 130.0,
-"brk_lo": 20.0,
-"coef_hi": 0.4,
-"coef_lo": 0.6,
-"opt_hi": 90.0,
+"brk_hi": 140.0,
+"brk_lo": 60.0,
+"coef_hi": 0.5,
+"coef_lo": 0.0,
+"opt_hi": 110.0,
 "opt_lo": 60.0,
 "param": &"param_temperature"
 }],
 "disaster": "h2_o2_deflagration",
-"id": "water_electrolysis",
+"id": "water_electrolysis_high_T",
 "inputs": {
 "H2|O1": 2
 },

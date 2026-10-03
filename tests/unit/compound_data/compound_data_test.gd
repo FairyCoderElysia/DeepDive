@@ -259,18 +259,110 @@ func test_resolve_scaled_is_disaster_aware() -> void:
 
 # ============================================================ 真实数据表
 
-func test_shipped_table_is_valid_and_has_the_three_steps() -> void:
-	assert_array(DATA.validate()).is_empty()
-	assert_int(DATA.steps.size()).is_equal(3)
+func test_shipped_table_has_four_steps_and_validates_clean() -> void:
+	const ET3 := preload("res://data/element_table.tres")
+	var known := {}
+	for sym: StringName in ET3.elements:
+		known[sym] = true
+	assert_array(DATA.validate(known)).is_empty()
+	# 4 条 = 水电解低T + 水电解高T（一对分支）+ 氯碱 + 除硬
+	assert_int(DATA.steps.size()).is_equal(4)
 
 
 ## 概念文档那条："条件不同，结果真的会不一样" —— 出厂表里必须真的能看出来
 func test_shipped_water_electrolysis_changes_with_temperature() -> void:
-	var s: Dictionary = DATA.steps[0]
-	var opt = DATA.evaluate(s, {&"param_temperature": 75.0})
-	var off = DATA.evaluate(s, {&"param_temperature": 118.0})
-	assert_float(float(opt["main_share"])).is_equal_approx(1.0, 0.0001)
+	# ⚠️ 出厂表里水电解是【一对分支】，所以必须按分支取，不能拿 steps[0] 当"那条水电解"
+	var br := DATA.steps_for({CD.composition_key(H2O): 2})
+	assert_int(br.size()).is_equal(2)
+	var low: Dictionary = br[0]
+	var high: Dictionary = br[1]
+	# 各自的最优带里都是 optimal、主占比 1.0
+	assert_float(float(DATA.evaluate(low, {&"param_temperature": 50.0})["main_share"])).is_equal_approx(1.0, 0.0001)
+	assert_float(float(DATA.evaluate(high, {&"param_temperature": 80.0})["main_share"])).is_equal_approx(1.0, 0.0001)
+	# 而高温分支往热了拧 -> 进偏移带，主占比下降、出副产物（这就是"条件不同结果不同"）
+	var off: Dictionary = DATA.evaluate(high, {&"param_temperature": 125.0})
+	assert_str(String(off["band"])).is_equal("offset")
 	assert_bool(float(off["main_share"]) < 1.0).is_true()
 	assert_bool((off["alts"] as Dictionary).size() > 0).is_true()
-	var bad = DATA.evaluate(s, {&"param_temperature": 150.0})
-	assert_str(String(bad["band"])).is_equal("disaster")
+	# 再往热 -> 灾难
+	assert_str(String(DATA.evaluate(high, {&"param_temperature": 150.0})["band"])).is_equal("disaster")
+	# 低温分支往下 -> 灾难（brk_lo = 20）
+	assert_str(String(DATA.evaluate(low, {&"param_temperature": 10.0})["band"])).is_equal("disaster")
+# ============================================================ 验收 2/3/4/5（承重约束的翻译）
+
+## ★ 验收 2：**同一输入在两组不同条件下必须能产出不同输出**。
+##   这是用户那句「**一台机器是反应中一个或多个步骤，而不是把反应定死**」的翻译。
+func test_branching_same_input_different_conditions_different_outputs() -> void:
+	var s := DATA.steps_for({CD.composition_key(H2O): 2})
+	assert_int(s.size()).is_greater_equal(2)                 # 两条分支
+	var lo: Dictionary = DATA.evaluate(s[0], {&"param_temperature": 50.0})   # 低温最优
+	var hi: Dictionary = DATA.evaluate(s[1], {&"param_temperature": 80.0})   # 高温最优
+	assert_str(String(lo["band"])).is_equal("optimal")
+	assert_str(String(hi["band"])).is_equal("optimal")
+	# 而两者**产出不同的化合物**（不是同一条反应换个数字）
+	assert_str(String(s[0]["id"])).is_not_equal(String(s[1]["id"]))
+	assert_bool(s[0]["outputs"] != s[1]["outputs"]).is_true()
+
+
+## ★ 验收 3：**至少一个产物存在两条以上可达路径**。
+##   这是用户那句「**同一产物允许多条路线**」的翻译（概念文档的承重约束 #1）。
+func test_at_least_one_product_has_two_or_more_paths() -> void:
+	var h2 := CD.composition_key({&"H": 2})
+	var paths := 0
+	for s: Dictionary in DATA.steps:
+		if (s["outputs"] as Dictionary).has(h2):
+			paths += 1
+	assert_int(paths).is_greater_equal(2)
+
+
+## ★ 验收 4：分支区间**既不重叠也不留缝**（否则会有"平局"或"无人区"）
+func test_shipped_branches_tile_without_gap() -> void:
+	var s := DATA.steps_for({CD.composition_key(H2O): 2})
+	var a: Dictionary = s[0]["conditions"][0]
+	var b: Dictionary = s[1]["conditions"][0]
+	# 无缝拼接：一个的上界恰好是另一个的下界
+	assert_bool(is_equal_approx(float(a["opt_hi"]), float(b["opt_lo"]))).is_true()
+	# 而朝内一侧必须是**零宽偏移带** —— 否则偏移带会侵入邻段的最优带
+	assert_bool(is_equal_approx(float(a["brk_hi"]), float(a["opt_hi"]))).is_true()
+	assert_bool(is_equal_approx(float(b["brk_lo"]), float(b["opt_lo"]))).is_true()
+
+
+func test_gap_between_branches_is_rejected() -> void:
+	var d := _new_data()
+	var a := _ok_step(); a["id"] = "a"
+	a["conditions"][0]["opt_lo"] = 20.0; a["conditions"][0]["opt_hi"] = 40.0
+	a["conditions"][0]["brk_lo"] = 10.0; a["conditions"][0]["brk_hi"] = 40.0
+	var b := _ok_step(); b["id"] = "b"
+	b["conditions"][0]["opt_lo"] = 50.0; b["conditions"][0]["opt_hi"] = 90.0   # 40..50 是无人区
+	b["conditions"][0]["brk_lo"] = 50.0; b["conditions"][0]["brk_hi"] = 100.0
+	d.steps = [a, b]
+	var errs := d.validate()
+	assert_int(errs.size()).is_greater(0)
+	assert_bool(String(errs[0]).contains("无人区")).is_true()
+
+
+## ★ 验收 5：引用 A1 未登记的元素时必须**报出缺的是哪个**（不得静默失败）
+func test_unknown_element_is_reported_by_name() -> void:
+	var d := _new_data()
+	var s := _ok_step()
+	s["outputs"] = {CD.composition_key({&"H": 2}): 1, CD.composition_key({&"Xx": 1}): 1}
+	d.steps = [s]
+	# 不传 known_elements -> 跳过这项；传了 -> 必须报
+	assert_array(d.validate()).is_not_empty()                  # 先因为配平被拒
+	const ET2 := preload("res://data/element_table.tres")
+	var known := {}
+	for sym: StringName in ET2.elements:
+		known[sym] = true
+	var errs := d.validate(known)
+	assert_int(errs.size()).is_greater(0)
+	var joined := " ".join(errs)
+	assert_bool(joined.contains("Xx")).is_true()
+
+
+## 出厂表引用的元素必须全都在元素表里（否则是数据错误）
+func test_shipped_table_references_only_registered_elements() -> void:
+	const ET := preload("res://data/element_table.tres")
+	var known := {}
+	for sym: StringName in ET.elements:
+		known[sym] = true
+	assert_array(DATA.validate(known)).is_empty()
