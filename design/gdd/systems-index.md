@@ -49,7 +49,7 @@
 | 13 | B7 百科 | Gameplay | T1 | **Approved** | design/gdd/encyclopedia.md | A2, A3, A6, B3 |
 | 14 | B8 渐进解锁 | Progression | T2 | **Approved** | design/gdd/progressive-unlock.md | B1, A6, B7 |
 | 15 | B9 工艺命名与工艺卡 | Progression | T2 | Not Started | — | A5, B7 |
-| 16 | B10 诊断与反馈 | UI | T1 | Not Started | — | B2, B5, A3 |
+| 16 | B10 诊断与反馈 | UI | T1 | **In Design** | design/gdd/diagnosis-feedback.md | B2, B5, A3 |
 | 17 | B11 HUD / UI `(inferred)` | UI | T1 | Not Started | — | B10, B3, B4, A6 |
 | 18 | B12 热力图主图层 | UI | T2 | Not Started | — | A5, B4, B2 |
 | 19 | B13 视觉身份·表层 | Visual | T2 | Not Started | — | A1 |
@@ -232,7 +232,7 @@
 | Metric | Count |
 |--------|-------|
 | Total systems identified | **29** |
-| Design docs started | **19** |
+| Design docs started | **20** |
 | Design docs reviewed | **19**（Core 段 11 个 + B1 · B7 · B8 · C1 · C2 · C3 · C4 · B19，Verdict 均 APPROVED） |
 | Design docs approved | 0 |
 | **T1（垂直切片）系统已设计** | 14 / **16**（Core 段 11 个 + B1 · B7 · **B19** 已评审 APPROVED；剩下 **B10 · B11** 属 Presentation Layer） |
