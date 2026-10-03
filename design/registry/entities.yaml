@@ -525,6 +525,23 @@ formulas:
     source: "概念文档：'工艺的命名、复用、优化都归玩家；系统不替玩家自动寻优'"
     referenced_by: [process-naming-cards]
 
+  - name: audio_mix_rule
+    description: 混音规则 —— "声音的总带宽"也是一种有限预算（同 art-bible 的颜色预算）。
+    expression: |
+      底噪 = 汇总(所有正常运行设备的声源)      ← 被压缩，不逐台发声
+      独奏 = 提升(关键设备 / 异常设备)          ← 数量必须有限（否则就变回噪音墙）
+    why_layering: |
+      两个极端都不行：逐机器 = 几十台就是一面噪音墙、且仍然听不出"哪台不对"；
+      全厂一个声景 = 丢掉定位能力，而 B10 的全部工作就是定位。
+    referenced_by: [audio]
+
+  - name: slowdown_audio_mapping
+    description: 世界走慢时的听觉映射。
+    expression: |
+      节拍(dt)   = 正常节拍 × (dt / 正常 dt)     ← 跟着世界变慢
+      波形连续性 = 必须保持（不得断裂）            ← 否则听起来是"卡"
+    referenced_by: [audio]
+
 constants:
 
   # ---------- 计量与口径 ----------
@@ -1420,3 +1437,39 @@ constants:
     value: "系统不替玩家自动寻优 —— 命名、复用、优化都归玩家"
     source: "概念文档 line 281"
     referenced_by: [process-naming-cards]
+
+  # ---------- B15 引入的常量 ----------
+
+  - name: AUDIO_IS_INFORMATION
+    value: "音频是【信息通道】，不是装饰 —— 声音必须与真实状态对应"
+    note: "同 B13 的 EMISSIVE_IS_INFORMATION —— '听起来在跑其实停了'是'暗算'的听觉版本"
+    referenced_by: [audio]
+
+  - name: AUDIO_LAYERING
+    value: "分层：底噪（其余汇总）说『厂在跑』· 独奏（关键/异常设备）说『这一台不对』"
+    key_point: "'这一台不对'正是 B10 的全部工作 —— 所以 B15 的独奏层是 B10 的【听觉接口】"
+    referenced_by: [audio]
+
+  - name: WRONG_CONNECTION_IS_NEUTRAL
+    value: "连线三声可辨，而'接错'是【中性但可辨】—— 不是报错音、也不预告后果"
+    two_rejections: |
+      报错音 -> 违背 B1 的澄清（化学错误是合法的，混料/接回上游/回流过量/自环全部允许）；
+      预告后果 -> 那是"系统替玩家评价"。
+    discipline: |
+      与本项目反复拒绝的形态是同一个：B7 百科「预告结果，不解释原因」·
+      B9 工艺卡「能并列，不评价」· B15 音频「中性但可辨，不预告后果」
+      -> 三条是同一条纪律：【给数据，不给结论】。
+    referenced_by: [audio]
+
+  - name: SLOW_IS_NOT_LAG
+    value: "'卡'与'慢'在听觉上本来就是两种形态：卡=断裂/断续/爆音 · 慢=连续但节拍更慢"
+    consequence: "'跟着变慢但波形连续'就是把它们区分开的那件事"
+    constrains_b19: |
+      它反过来给 B19 一条约束："世界走慢"必须是【连续变慢】，不能是【跳着算】——
+      否则音频会跟着断裂，而那听起来就是"卡了"。
+    referenced_by: [audio, performance-budget]
+
+  - name: AUDIO_NEVER_SOLE_CHANNEL
+    value: "音频不能是任何信息的【唯一通道】"
+    why: "玩家可能把音量关到 0（那是他们的自由）—— 而那时信息不能丢"
+    referenced_by: [audio]
