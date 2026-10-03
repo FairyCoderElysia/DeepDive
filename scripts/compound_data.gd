@@ -204,6 +204,25 @@ func validate(known_elements: Dictionary = {}) -> Array:
 	return errors
 
 
+# ---------------------------------------------------------------- 序列化（验收 7）
+
+## **二进制**通道。与 A1 同口径（`var_to_bytes`），供 B16 存档 / 工艺卡之外的持久化使用。
+## 注意：`.tres` 本身就是一种序列化（给编辑器用）；本函数是给【运行时存档】用的。
+func to_bytes() -> PackedByteArray:
+	return var_to_bytes({"v": schema_version, "steps": steps})
+
+
+static func from_bytes(data: PackedByteArray) -> CompoundData:
+	var d = bytes_to_var(data)
+	assert(d is Dictionary and int(d.get("v", -1)) == SCHEMA_VERSION,
+		"schema 版本不匹配 —— 必须走迁移（A4），不得静默继续")
+	assert(typeof(d["v"]) == TYPE_INT, "版本字段回来时不是 int —— 说明有人把它过了一遍 JSON")
+	var out = CompoundData.new()
+	out.schema_version = int(d["v"])
+	out.steps = (d["steps"] as Array).duplicate(true)
+	return out
+
+
 # ---------------------------------------------------------------- 查询（A3 用）
 
 ## 按输入查记录。**返回数组** —— A2 的契约明写「**不得假设一个产物只有一条路径**」。

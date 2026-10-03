@@ -366,3 +366,43 @@ func test_shipped_table_references_only_registered_elements() -> void:
 	for sym: StringName in ET.elements:
 		known[sym] = true
 	assert_array(DATA.validate(known)).is_empty()
+
+# ============================================================ 验收 7：序列化往返
+
+func test_binary_round_trip_preserves_the_table() -> void:
+	var rb = CD.from_bytes(DATA.to_bytes())
+	assert_int(rb.steps.size()).is_equal(DATA.steps.size())
+	assert_int(rb.schema_version).is_equal(DATA.schema_version)
+	# 类型也必须仍是 int（这一条是只比 == 会漏掉的）
+	assert_int(typeof(rb.schema_version)).is_equal(TYPE_INT)
+	# 而且回来的表必须仍然自洽（能过校验、能求值）
+	const ET4 := preload("res://data/element_table.tres")
+	var known := {}
+	for sym: StringName in ET4.elements:
+		known[sym] = true
+	assert_array(rb.validate(known)).is_empty()
+	var br := rb.steps_for({CD.composition_key(H2O): 2})
+	var ev = rb.evaluate(br[0], {&"param_temperature": 50.0})
+	assert_str(String(ev["band"])).is_equal("optimal")
+
+
+## ★ 这条测试记录一个**诚实的发现**（并更正了 A2 的验收 7）：
+##
+## A2 的数据过一遍 JSON 之后，**功能上仍然正确** —— 校验通过、求值正确。
+## 它坏掉的只是【类型】：`schema_version` 从 `INT` 变 `FLOAT`，`param` 从 `StringName` 变 `String`。
+##
+## ⚠️ 这与 A1 **不一样**：A1 过 JSON 是**值真的坏了**（int64 掉精度，而 `==` 还说相等）。
+## **⇒ 同一条纪律换一个系统，失效方式会不一样 —— 所以验收不能照抄。**
+func test_json_channel_corrupts_types_but_not_behaviour() -> void:
+	var via = JSON.parse_string(JSON.stringify({"v": DATA.schema_version, "steps": DATA.steps}))
+	# ① 类型确实坏了
+	assert_int(typeof(via["v"])).is_equal(TYPE_FLOAT)
+	assert_int(typeof(via["steps"][0]["conditions"][0]["param"])).is_equal(TYPE_STRING)
+	# ② 但功能没坏 —— 校验照样过、求值照样对
+	var d = CD.new()
+	d.schema_version = int(via["v"])
+	d.steps = via["steps"]
+	assert_array(d.validate({})).is_empty()
+	assert_str(String(d.evaluate(d.steps[0], {&"param_temperature": 50.0})["band"])).is_equal("optimal")
+	# ③ 所以二进制通道仍然是【必须的】—— 它保住了类型；而 JSON 的代价此刻只是"类型不干净"，
+	#    但一旦将来某个字段变成大整数（例如把原子数写进表），它就会像 A1 那样【静默掉精度】。
