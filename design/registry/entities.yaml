@@ -495,7 +495,7 @@ constants:
 
   - name: TWO_FAILURE_CHANNELS
     value: "氯通道 = 组成问题；结垢通道 = 设备状态"
-    note: "两条通道【互补】的机制原因正是"表示方式不同"。"
+    note: "两条通道【互补】的机制原因正是「表示方式不同」。"
     why_complementary: |
       一个攻击你的物质（物流里混进了别的东西，看得见、立刻发作、靠分离/存贮/销毁解决），
       一个攻击你的设备（换热面上的积垢量，看不见物流、持续发作、靠清洗解决）。
@@ -513,6 +513,6 @@ constants:
 
   - name: MAINTENANCE_IS_NOT_A_TIMER
     value: "维护周期 ≠ 时间限制"
-    note: "概念文档原话：'结垢是"你自己的设备会老化，你要安排清理"，不是"有人在催你"'。"
+    note: "概念文档原话：洁结垢是你自己的设备会老化、你要安排清理，不是有人在催你。"
     feel_difference: "前者是【你在管理】，后者是【你在被追】—— 这个区别是手感上的"
     referenced_by: [contaminants-failure-channels]
