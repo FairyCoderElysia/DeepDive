@@ -300,3 +300,44 @@ func test_branch_only_machine_gets_a_nonzero_bound() -> void:
 	assert_bool(int(res["advanced_scaled"]) > 0).is_true()      # 上界不是 0
 	assert_str(String(res["band"])).is_not_equal("idle")
 	assert_bool((res["made"] as Dictionary).has(_H2())).is_true()
+
+
+# ============================================================ ③ 整数量化：余数累加器（回归）
+
+## ★ 回归：**"半批产物"的余数必须留下**，不能每 tick 丢掉。
+##
+## A3 的 ③ 明写「整数量化走 A1 的那套放大整数机制」—— 也就是**留余数**。
+## 本条的判别力来自一个**受控场景**，而不是随便跑一跑：
+##   每 tick 只喂 1 个水，而 `2H₂O -> 2H₂ + O₂` 每批要 2 个水
+##   ⇒ 每 tick 恰好推进 0.5 批 ⇒ 每 tick 的 O₂ 恰好是 **0.5 个**。
+##     · 留余数：第 2 tick 两个 0.5 凑成 1 ⇒ 8 tick 后拿到 4 个 O₂ ⇒ **原子误差 0**。
+##     · 丢余数：O₂ 永远是 0 ⇒ 水里的氧凭空消失 ⇒ **原子误差随 tick 数线性增长**。
+##
+## ⚠️ 修好之后我写过两版"想锁住它"的测试，**都没锁住**（一版写死上界 11、
+##    一版查斜率不增），因为那两版跑的场景里余数恰好都凑得整。
+##    **"测试通过"不等于"测试测到了东西"** —— 所以本条我做了控制实验：
+##    把 ③ 的累加器临时换成裸 floor（`whole = r[k] / scale`，余数不留），
+##    **本条断言确实失败**；换回来通过。判别力是量出来的，不是推出来的。
+func test_fractional_product_remainder_accumulates_instead_of_being_discarded() -> void:
+	var t := _table()
+	var W := _H2O()
+	var H := _H2()
+	var O := _O2()
+	var solver = RS.new()                       # ★ 累加器是**实例状态**，必须跨 tick 用同一个求解器
+	var m := _machine("m", _electrolysis_step("m"))
+	var avail := {}
+	var ticks := 8                              # 8 个水 = 4 批 ⇒ 确切应为 8 H₂ + 4 O₂
+	var took_atoms := 0
+	var made_atoms := 0
+	for i in ticks:
+		avail[W] = int(avail.get(W, 0)) + 1     # 每 tick 只喂 1 个水（永远不够一整批）
+		var r = solver.solve([m], avail, t)
+		var res: Dictionary = r["results"][0]
+		took_atoms += CD.total_atoms_of(res["took"] as Dictionary)
+		made_atoms += CD.total_atoms_of(res["made"] as Dictionary)
+		RS.apply(res, avail)
+	# ① 产物是**整个**地出现：4 个 O₂（丢余数的话这里恒为 0，而 H₂ 仍会是 8）
+	assert_int(int(avail.get(H, 0))).is_equal(8)
+	assert_int(int(avail.get(O, 0))).is_equal(4)
+	# ② 原子对账：吃进去的原子数 == 吐出来的原子数（丢余数的话误差正好 = 8）
+	assert_int(made_atoms).is_equal(took_atoms)
