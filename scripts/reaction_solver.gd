@@ -80,59 +80,48 @@ func _solve_layer(layer: Array, avail: Dictionary, table: CompoundData) -> Dicti
 	var warned := false
 	var iterations := 0
 
-	# 每台机器的推进量（**分数**）。初值用"池里全部"当作上界。
-	var a := {}
+	# 每台机器的推进量（**分数**）。
+	#
+	# ★ 这里用 F-A3-2 那段迭代的【闭式解】 —— 而不是真的去迭代。
+	#   为什么（这是集成三台机器时才暴露的）：
+	#     · 那段迭代的式子是 `a_m ← a_m × avail_i / Σ_m'(req_m'i × a_m')`，
+	#       而 **分母与 a_m 同比缩放** ⇒ `a_m / total_i` 是不变量
+	#       ⇒ **它根本不会收敛**，只会一路缩小（实测：三台机器时每 tick 都打到上限并告警，
+	#       改成有限初值后又一路缩到 0、反应全停）。
+	#     · 而它想收敛到的那个点有闭式解，且**正好就是规格自己举的那个答案**：
+	#         两台各要 2H+1O、池里 2H 与 100O -> 各推进 0.5、O 只用掉 1、第三台不被饿死。
+	#
+	#   闭式：
+	#     a_m0 = min_i ( avail_i / req_mi )              ← 单机上界（A3 的 ②）
+	#     f    = min_i ( avail_i / Σ_m(req_mi × a_m0) )  ← 共同的公平比例
+	#     a_m  = f × a_m0
+	#
+	#   ★ 而规格里那句"把用不到的份额释放回池"是**自动**的：
+	#     a_m0 已经把每台机器限制在"它实际用得上"的量上 —— 所以不存在"分了 50 个 O 只用 0.5 个"。
+	#   ★ 于是也不需要"迭代上限 + 告警"了：它一步算完、必然收敛、且确定性。
+	#     （MAX_ITERATIONS 保留为常量，但正常路径不再用到它。）
+	var a0 := {}
 	for m: Dictionary in layer:
-		a[m["id"]] = INF
+		a0[m["id"]] = _single_machine_bound(m, avail, table)
 
-	# ★ 迭代到不动点。**"需求"应当是"它实际能推进的量所需要的量"，
-	#   而那个量又依赖分配结果 —— 所以这是不动点，不是一趟分配。**
-	for it in MAX_ITERATIONS:
-		iterations = it + 1
-		var next := {}
-		var moved := false
-		# 每个输入项，按【当前实际需求】比例把可用量虚拟分给层内各机器
-		for key: String in _layer_input_keys(layer):
-			var avail_amt := float(avail.get(key, 0))
-			var demands := {}
-			var total := 0.0
-			for m: Dictionary in layer:
-				var req := float(_input_of(m, key))
-				if req <= 0.0:
-					demands[m["id"]] = 0.0
-					continue
-				# 当前的"实际需求" = 单批需求 × 当前推进量（无界时按单批需求）
-				var a_now: float = a[m["id"]]
-				var d: float = req * (1.0 if is_inf(a_now) else a_now)
-				demands[m["id"]] = d
-				total += d
-			# 虚拟份额（**它只是用来算推进量的，不是要真的扣掉的量**）
-			for m: Dictionary in layer:
-				var d2: float = demands[m["id"]]
-				if d2 <= 0.0:
-					continue
-				var share := avail_amt * (d2 / total) if total > 0.0 else 0.0
-				var req2 := float(_input_of(m, key))
-				var cap := share / req2 if req2 > 0.0 else INF   # 这一项允许的推进量
-				next[m["id"]] = minf(next.get(m["id"], INF), cap)
-		# 没被任何输入项限制的机器（不需要任何输入）：保持无界
-		for m: Dictionary in layer:
-			if not next.has(m["id"]):
-				next[m["id"]] = a[m["id"]]
-		# 收敛判定
-		for m: Dictionary in layer:
-			var before: float = a[m["id"]]
-			var after: float = next[m["id"]]
-			if is_inf(before) or not is_equal_approx(before, after):
-				if not (is_inf(before) and is_inf(after)):
-					moved = true
-		a = next
-		if not moved:
-			break
-	if iterations >= MAX_ITERATIONS:
-		# 未稳定：**采用当前结果 + 告警**（A3 明写"不得静默"）
-		warned = true
-		push_warning("A3：层内等分在 %d 次迭代内未收敛 —— 采用当前结果（F-A3-2）" % MAX_ITERATIONS)
+	var f := INF
+	for key: String in _layer_input_keys(layer):
+		var avail_amt := float(avail.get(key, 0))
+		var total_demand := 0.0
+		for m2: Dictionary in layer:
+			var req := float(_input_of(m2, key))
+			if req > 0.0:
+				total_demand += req * float(a0[m2["id"]])
+		if total_demand > 0.0:
+			f = minf(f, avail_amt / total_demand)
+	if is_inf(f):
+		f = 1.0
+	f = clampf(f, 0.0, 1.0)
+
+	var a := {}
+	for m3: Dictionary in layer:
+		a[m3["id"]] = float(a0[m3["id"]]) * f
+	iterations = 1                 # 闭式解：一步算完（不再迭代）
 
 	# ---- 本层稳定：按【实际用量】扣除、产出写回 ----
 	# ⚠️ 关键：虚拟份额不扣，**真正扣的是 `单批需求 × 推进量`** ——
@@ -237,6 +226,26 @@ func _pick_branch(m: Dictionary, table: CompoundData) -> Dictionary:
 		if table.evaluate(b, cond)["band"] != "disaster":
 			return b
 	return sorted_b[0]
+
+
+## 单机视角的上界：`min_i (可用量_i ÷ 需求_i)` —— 也就是 A3 的 ②（限制试剂）。
+## 它用作层内迭代的**有限初值**（见 `_solve_layer` 里那段注释：INF 会让不动点不唯一）。
+func _single_machine_bound(m: Dictionary, avail: Dictionary, table: CompoundData) -> float:
+	# ⚠️ 必须走【分支判定】取 step，不能直接读 m["step"] —— 分支型机器只有 branches。
+	#    这是"改一处取值方式、把所有读同一字段的地方一起改"那条教训的**第三次**：
+	#    前两次是 _layer_input_keys / _input_of，而这次是我【新写】的代码又踩了同一个坑。
+	var step: Dictionary = _pick_branch(m, table)
+	var best := INF
+	var any := false
+	for k: String in (step.get("inputs", {}) as Dictionary):
+		var req := int(step["inputs"][k])
+		if req <= 0:
+			continue
+		any = true
+		best = minf(best, float(avail.get(k, 0)) / float(req))
+	if not any:
+		return INF          # 不需要输入的机器：保持无界（它不受池的限制）
+	return best
 
 
 func _empty_result(m: Dictionary) -> Dictionary:

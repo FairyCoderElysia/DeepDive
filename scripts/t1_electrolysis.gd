@@ -26,6 +26,8 @@ const SOLVER := preload("res://scripts/reaction_solver.gd")
 const GRAPH := preload("res://scripts/process_graph.gd")
 
 const WATER := {&"H": 2, &"O": 1}
+const SALT := {&"Na": 1, &"Cl": 1}          # NaCl
+const CALCIUM_CHLORIDE := {&"Ca": 1, &"Cl": 2}   # CaCl₂
 
 ## 进水 0.37 个水分子 / tick。⚠️ 速率一律以"每 tick 的放大整数"表达（A1 的 ②）
 const WATER_PER_TICK_SCALED := 37 * ElementPool.SCALE / 100
@@ -36,6 +38,10 @@ const TEMP_PER_TICK := 1.2
 const TEMP_MIN := 30.0
 const TEMP_MAX := 145.0
 
+## NaCl 0.10 /tick · CaCl₂ 0.05 /tick（都给得比反应需要少 —— 让"抢料"真的发生）
+const SALT_PER_TICK_SCALED := 10 * ElementPool.SCALE / 100
+const CACL2_PER_TICK_SCALED := 5 * ElementPool.SCALE / 100
+
 const TICK_HZ := 10
 const LOG_EVERY_TICKS := 20
 const RUN_TICKS := 100
@@ -45,18 +51,33 @@ var _solver = SOLVER.new()
 var _graph = GRAPH.new()
 var _compounds: Dictionary = {}
 var _widgets := {}
+var _intakes: Array = []
 var _tick := 0
 var _temp := 45.0
 
 
 func _ready() -> void:
 	_build_ui()
-	# ★ T1 的图：**一个节点**（将来加机器只需在这里多 add_node + add_edge）
-	_graph.add_node({
-		"id": &"electrolyzer", "priority": 0,
-		"branches": TABLE.steps_for({CompoundData.composition_key(WATER): 2}),
-		"conditions": {&"param_temperature": _temp},
-	})
+	# ★ T1 的图：**三台机器 + 一条流**（这才是"垂直切片"该有的样子）
+	#   电解（水 → H₂+O₂）· 氯碱（NaCl+水 → NaOH+Cl₂+H₂）· 除硬（CaCl₂+NaOH → Ca(OH)₂+NaCl）
+	#   而 **NaOH 从氯碱流到除硬** —— 那是 A5 的【边】第一次被真的用上。
+	var K := CompoundData.composition_key
+	_graph.add_node({"id": &"electrolyzer", "priority": 0,
+		"branches": TABLE.steps_for({K.call(WATER): 2}),
+		"conditions": {&"param_temperature": _temp}})
+	_graph.add_node({"id": &"chlor_alkali", "priority": 0,
+		"branches": TABLE.steps_for({K.call(SALT): 2, K.call(WATER): 2}),
+		"conditions": {&"param_temperature": _temp}})
+	_graph.add_node({"id": &"hardness_removal", "priority": 0,
+		"branches": TABLE.steps_for({K.call(CALCIUM_CHLORIDE): 1, K.call({&"Na": 1, &"O": 1, &"H": 1}): 2}),
+		"conditions": {&"param_temperature": _temp}})
+	_graph.add_edge(&"chlor_alkali", &"hardness_removal")      # NaOH 那条流
+	# 原料（每种各走 A1 的余数累加器）
+	_intakes = [
+		{"id": &"intake_water", "key": &"water", "rate": WATER_PER_TICK_SCALED, "formula": WATER},
+		{"id": &"intake_salt", "key": &"salt", "rate": SALT_PER_TICK_SCALED, "formula": SALT},
+		{"id": &"intake_cacl2", "key": &"cacl2", "rate": CACL2_PER_TICK_SCALED, "formula": CALCIUM_CHLORIDE},
+	]
 	# 定步长：P2 要求"同存档 + 同操作序列 → 结果必然复现"，所以绝不跟随帧间隔
 	var timer := Timer.new()
 	timer.wait_time = 1.0 / TICK_HZ
@@ -75,10 +96,11 @@ func _step() -> void:
 	if _temp >= TEMP_MAX:
 		_temp = TEMP_MIN
 
-	# ① 进水（走 A1 的余数累加器，全程无浮点）
-	var water_whole := _pool.accumulate(&"intake", &"water", WATER_PER_TICK_SCALED)
-	if water_whole > 0 and _pool.add_formula(WATER, water_whole):
-		_add_compound(WATER, water_whole)
+	# ① 进水（多种原料，各走 A1 的余数累加器，全程无浮点）
+	for it: Dictionary in _intakes:
+		var whole := _pool.accumulate(it["id"], it["key"], it["rate"])
+		if whole > 0 and _pool.add_formula(it["formula"], whole):
+			_add_compound(it["formula"], whole)
 
 	# ② 反应（走 A2 的表）：攒够整数批才做
 	var batches := _pool.accumulate(&"reactor", &"batch", BATCH_PER_TICK_SCALED)
@@ -101,12 +123,16 @@ func _step() -> void:
 
 ## ★ 本版的核心：反应完全由 A2 的数据决定
 func _run_reaction(batches: int) -> void:
-	# ★ 走 A5：把本切片当作一张【单节点图】来求值。
-	#   单节点图上 A5 的语义与"直接调 A3"逐位相同 —— 见 process_graph_test 里那条证据。
-	#   将来加机器只需 add_node + add_edge，本函数不用改。
-	_graph.node(&"electrolyzer")["conditions"] = {&"param_temperature": _temp}
+	# ★ 走 A5：把本切片当作一张【图的求值】 —— 现在图里有【三台机器 + 一条流】。
+	#   NaOH 从氯碱流到除硬，那是 A5 的【边】第一次被真的用上。
+	#   将来加机器只需在 _ready 里 add_node + add_edge，本函数不用改。
+	for nid2: StringName in _graph.node_ids():
+		_graph.node(nid2)["conditions"] = {&"param_temperature": _temp}
 	var g_r: Dictionary = _graph.evaluate(_compounds, TABLE, _solver)
-	var by_node: Array = (g_r["results"] as Dictionary).get(&"electrolyzer", [])
+	# ★ 遍历【所有】节点 —— 一台机器一个结果；而不是只看某台
+	var by_node: Array = []
+	for nid: StringName in (g_r["results"] as Dictionary):
+		by_node.append_array(g_r["results"][nid])
 
 	for res: Dictionary in by_node:
 		var took: Dictionary = res.get("took", {})
