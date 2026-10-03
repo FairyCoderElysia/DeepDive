@@ -55,7 +55,7 @@
 | 19 | B13 视觉身份·表层 | Visual | T2 | Not Started | — | A1 |
 | 20 | B14 视觉身份·深度可读性 | Visual | T3 | Not Started | — | C1 |
 | 21 | B15 音频 `(inferred)` | Audio | T2 | Not Started | — | B5, B1 |
-| 22 | B16 存档 / 读档 `(inferred)` | Persistence | T2 | Not Started | — | A1, A5, B6, B8, C1, C3 |
+| 22 | B16 存档 / 读档 `(inferred)` | Persistence | T2 | Not Started | — | A1, A5, B6, B8, C1, C3, A4 |
 | 23 | B17 新手引导 / 教程 | Meta | T2 | Not Started | — | A5, B1, B7, B8 |
 | 24 | B18 设置与无障碍 `(inferred)` | Meta | T3 | Not Started | — | B11 |
 | 25 | B19 性能预算与管网 tick | Technical | T1 | Not Started | — | A5 |
