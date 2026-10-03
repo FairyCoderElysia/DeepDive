@@ -71,7 +71,6 @@ func solve(machines: Array, available: Dictionary, table: CompoundData) -> Dicti
 # ---------------------------------------------------------------- 层的求解（F-A3-2 的落点）
 
 func _solve_layer(layer: Array, avail: Dictionary, table: CompoundData) -> Dictionary:
-	print("  [L] 入口 avail=", avail, " 层内机器=", layer.map(func(m): return "%s(p%d)" % [m["id"], m.get("priority",0)]))
 	var results: Array = []
 	var warned := false
 	var iterations := 0
