@@ -1,6 +1,6 @@
 # B6 · 储罐与容量（Tanks & Capacity）
 
-> **Status**: Draft（骨架 —— 已定的写清，未定的标 `[待定]`；我的建议标 `[待确认]`）
+> **Status**: **Approved**（2026-10-02 评审通过 —— 见 `design/gdd/reviews/tanks-capacity-review-log.md`）
 > **Category**: Gameplay · **Layer**: Foundation · **Priority**: T1
 > **Depends On**: **A1**（存的是原子池）
 > **被依赖**: **1 个**（B16 存档 / 读档）—— 口径：`systems-index` 的 `Depends On` 列含 `B6` 的行数

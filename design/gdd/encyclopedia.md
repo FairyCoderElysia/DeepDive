@@ -1,6 +1,6 @@
 # B7 · 百科（Encyclopedia）
 
-> **Status**: Draft（骨架 —— 已定的写清，未定的标 `[待定]`；我的建议标 `[待确认]`）
+> **Status**: **Approved**（2026-10-02 评审通过 —— 见 `design/gdd/reviews/encyclopedia-review-log.md`）
 > **Category**: Gameplay · **Layer**: Feature · **Priority**: T1
 > **Depends On**: **A2**（化合物与步骤）· **A3**（在什么条件下给出什么）· **A6**（代价）· **B3**（档位与分离）
 > **被依赖**: **3 个**（B8 渐进解锁 · B9 工艺命名与工艺卡 · B17 新手引导）

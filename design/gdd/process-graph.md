@@ -1,6 +1,6 @@
 # A5 · 工艺图与连续流求解（Process Graph & Continuous Flow）
 
-> **Status**: Draft（骨架 —— 已定的写清，未定的标 `[待定]`；我的建议标 `[待确认]`）
+> **Status**: **Approved**（2026-10-02 评审通过 —— 见 `design/gdd/reviews/process-graph-review-log.md`）
 > **Category**: Core · **Layer**: Foundation · **Priority**: T1
 > **Depends On**: **A3**（反应求解器 —— 图求值的语义来自它）
 > **被依赖**: **8 个**（B1 · B9 · B12 · B16 · B17 · B19 · C1 · C3）

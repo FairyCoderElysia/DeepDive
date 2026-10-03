@@ -1,6 +1,6 @@
 # B3 · 纯度分级与分离提纯（Purity Grading & Separation）
 
-> **Status**: Draft（骨架 —— 已定的写清，未定的标 `[待定]`；我的建议标 `[待确认]`）
+> **Status**: **Approved**（2026-10-02 评审通过 —— 见 `design/gdd/reviews/purity-grading-review-log.md`）
 > **Category**: Gameplay · **Layer**: Foundation · **Priority**: T1
 > **Depends On**: **B2**（污染从哪来、它是什么）· **A1**（纯度的分母是原子数）
 > **被依赖**: **3 个**（B1 · B7 · B11）

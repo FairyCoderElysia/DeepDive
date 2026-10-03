@@ -1,6 +1,6 @@
 # B4 · 氧气经济（Oxygen Economy）
 
-> **Status**: Draft（骨架 —— 已定的写清，未定的标 `[待定]`；我的建议标 `[待确认]`）
+> **Status**: **Approved**（2026-10-02 评审通过 —— 见 `design/gdd/reviews/oxygen-economy-review-log.md`）
 > **Category**: Economy · **Layer**: Foundation · **Priority**: T1
 > **Depends On**: **A3**（氧的产出与消耗都来自反应结果）
 > **被依赖**: **4 个**（B1 · B11 · B12 · C1）

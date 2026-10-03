@@ -1,6 +1,6 @@
 # B1 · 连线编辑与四种连线决策
 
-> **Status**: Draft（骨架 —— 已定的写清，未定的标 `[待定]`；我的建议标 `[待确认]`）
+> **Status**: **Approved**（2026-10-02 评审通过 —— 见 `design/gdd/reviews/connection-decisions-review-log.md`）
 > **Category**: Gameplay · **Layer**: Feature · **Priority**: T1
 > **Depends On**: **A5**（图与合法性）· **B2**（污染后果）· **B3**（分离产线）· **B4**（氧代价）
 > **被依赖**: **3 个**（B8 渐进解锁 · B15 音频 · B17 新手引导）

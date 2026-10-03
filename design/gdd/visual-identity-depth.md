@@ -1,6 +1,6 @@
 # B14 · 视觉身份·深度可读性（Visual Identity · Depth Readability）
 
-> **Status**: Draft（骨架 —— 已定的写清，未定的标 `[待定]`；我的建议标 `[待确认]`）
+> **Status**: **Approved**（2026-10-02 评审通过 —— 见 `design/gdd/reviews/visual-identity-depth-review-log.md`）
 > **Category**: Visual · **Layer**: Presentation · **Priority**: **T3**
 > **Depends On**: **C1**（深度的连续值）
 > **被依赖**: **0 个** —— 口径：`systems-index` 的 `Depends On` 列含 `B14` 的行数

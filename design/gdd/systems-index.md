@@ -1,6 +1,6 @@
 # Systems Index: 深海工艺（DeepDive: Process）
 
-> **Status**: Draft
+> **Status**: Living（**随设计推进更新** —— 26/26 系统已设计并评审通过；**本文件自身未经独立评审**）
 > **Created**: 2026-10-02
 > **Last Updated**: 2026-10-02
 > **Source Concept**: design/gdd/game-concept.md

@@ -1,6 +1,6 @@
 # C1 · 深度分层与通量阶梯（Depth Layers & Throughput Ladder）
 
-> **Status**: Draft（骨架 —— 已定的写清，未定的标 `[待定]`；我的建议标 `[待确认]`）
+> **Status**: **Approved**（2026-10-02 评审通过 —— 见 `design/gdd/reviews/depth-layers-review-log.md`）
 > **Category**: World · **Layer**: Feature · **Priority**: T3 完整愿景（**但含一条 T1 的硬义务**，见下）
 > **Depends On**: **A5**（管网与带宽）· **B4**（耗氧）
 > **被依赖**: **4 个**（B14 视觉·深度可读性 · B16 存档 · C2 矿脉与开采 · C4 程序生成）

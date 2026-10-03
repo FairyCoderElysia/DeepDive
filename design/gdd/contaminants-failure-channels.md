@@ -1,6 +1,6 @@
 # B2 · 污染物与失败通道（Cl / 结垢）
 
-> **Status**: Draft（骨架 —— 已定的写清，未定的标 `[待定]`；我的建议标 `[待确认]`）
+> **Status**: **Approved**（2026-10-02 评审通过 —— 见 `design/gdd/reviews/contaminants-failure-channels-review-log.md`）
 > **Category**: Gameplay · **Layer**: Foundation · **Priority**: T1
 > **Depends On**: **A3**（副产物从反应里来）· **A6**（各参数点上的污染形状）
 > **被依赖**: **4 个**（B1 · B3 · B10 · B12）

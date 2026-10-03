@@ -1,6 +1,6 @@
 # C3 · 飞船与零件（Ship & Parts）
 
-> **Status**: Draft（骨架 —— 已定的写清，未定的标 `[待定]`；我的建议标 `[待确认]`）
+> **Status**: **Approved**（2026-10-02 评审通过 —— 见 `design/gdd/reviews/ship-and-parts-review-log.md`）
 > **Category**: World · **Layer**: Feature · **Priority**: T3
 > **Depends On**: **A5**（工艺图）· **A3**（反应求解）· **C2**（材料来源）
 > **被依赖**: **1 个**（B16 存档）

@@ -1,6 +1,6 @@
 # B19 · 性能预算与管网 tick（Performance Budget & Graph Tick）
 
-> **Status**: Draft（骨架 —— 已定的写清，未定的标 `[待定]`；我的建议标 `[待确认]`）
+> **Status**: **Approved**（2026-10-02 评审通过 —— 见 `design/gdd/reviews/performance-budget-review-log.md`）
 > **Category**: Technical · **Layer**: Feature · **Priority**: **T1**
 > **Depends On**: **A5**（唯一上游 —— "一次求值要做什么"）
 > **被依赖**: **0 个** —— 口径：`systems-index` 的 `Depends On` 列含 `B19` 的行数

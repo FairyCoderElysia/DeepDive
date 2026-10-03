@@ -1,6 +1,6 @@
 # B10 · 诊断与反馈（Diagnosis & Feedback）
 
-> **Status**: Draft（骨架 —— 已定的写清，未定的标 `[待定]`；我的建议标 `[待确认]`）
+> **Status**: **Approved**（2026-10-02 评审通过 —— 见 `design/gdd/reviews/diagnosis-feedback-review-log.md`）
 > **Category**: UI · **Layer**: Presentation · **Priority**: **T1**
 > **Depends On**: **B2**（污染的两条通道）· **B5**（灾难的因果链）· **A3**（可归因的失败）
 > **被依赖**: **1 个**（B11 HUD / UI）

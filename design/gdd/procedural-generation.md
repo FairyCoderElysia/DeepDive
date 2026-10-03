@@ -1,6 +1,6 @@
 # C4 · 程序生成（Procedural Generation）
 
-> **Status**: Draft（骨架 —— 已定的写清，未定的标 `[待定]`；我的建议标 `[待确认]`）
+> **Status**: **Approved**（2026-10-02 评审通过 —— 见 `design/gdd/reviews/procedural-generation-review-log.md`）
 > **Category**: World · **Layer**: Feature · **Priority**: T3
 > **Depends On**: **C1**（分层的参数化）· **C2**（矿脉是什么）
 > **被依赖**: **0 个** —— 口径：`systems-index` 的 `Depends On` 列含 `C4` 的行数

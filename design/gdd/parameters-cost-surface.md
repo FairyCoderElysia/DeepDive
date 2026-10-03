@@ -1,6 +1,6 @@
 # A6 · 参数与代价面（Parameters & Cost Surface）
 
-> **Status**: Draft（骨架 —— 已定的写清，未定的标 `[待定]`；我的建议标 `[待确认]`）
+> **Status**: **Approved**（2026-10-02 评审通过 —— 见 `design/gdd/reviews/parameters-cost-surface-review-log.md`）
 > **Category**: Core · **Layer**: Foundation · **Priority**: T1
 > **Depends On**: **A3**（反应求解器 —— 代价是"实际发生了什么"的聚合）
 > **被依赖**: **5 个**（B2 · B5 · B7 · B8 · B11）

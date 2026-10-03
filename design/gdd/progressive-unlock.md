@@ -1,6 +1,6 @@
 # B8 · 渐进解锁（Progressive Unlock）
 
-> **Status**: Draft（骨架 —— 已定的写清，未定的标 `[待定]`；我的建议标 `[待确认]`）
+> **Status**: **Approved**（2026-10-02 评审通过 —— 见 `design/gdd/reviews/progressive-unlock-review-log.md`）
 > **Category**: Progression · **Layer**: Feature · **Priority**: T2
 > **Depends On**: **B1**（连线决策的阶梯）· **A6**（参数与代价）· **B7**（百科条目的分层）
 > **被依赖**: **2 个**（B16 存档 · B17 新手引导）

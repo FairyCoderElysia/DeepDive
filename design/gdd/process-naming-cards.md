@@ -1,6 +1,6 @@
 # B9 · 工艺命名与工艺卡（Process Naming & Process Card）
 
-> **Status**: Draft（骨架 —— 已定的写清，未定的标 `[待定]`；我的建议标 `[待确认]`）
+> **Status**: **Approved**（2026-10-02 评审通过 —— 见 `design/gdd/reviews/process-naming-cards-review-log.md`）
 > **Category**: Progression · **Layer**: Presentation · **Priority**: **T2**
 > **Depends On**: **A5**（图的拓扑与参数）· **B7**（"游戏给的路线"那一侧）
 > **被依赖**: **0 个** —— 口径：`systems-index` 的 `Depends On` 列含 `B9` 的行数

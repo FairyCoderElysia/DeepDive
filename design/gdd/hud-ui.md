@@ -1,6 +1,6 @@
 # B11 · HUD / UI
 
-> **Status**: Draft（骨架 —— 已定的写清，未定的标 `[待定]`；我的建议标 `[待确认]`）
+> **Status**: **Approved**（2026-10-02 评审通过 —— 见 `design/gdd/reviews/hud-ui-review-log.md`）
 > **Category**: UI · **Layer**: Presentation · **Priority**: **T1**
 > **Depends On**: **B10**（要说什么）· **B3**（档位与差距）· **B4**（氧收支）· **A6**（代价与切片）
 > **被依赖**: **1 个**（B18 设置与无障碍）

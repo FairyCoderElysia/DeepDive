@@ -1,6 +1,6 @@
 # C2 · 矿脉与开采（Ore Veins & Extraction）
 
-> **Status**: Draft（骨架 —— 已定的写清，未定的标 `[待定]`；我的建议标 `[待确认]`）
+> **Status**: **Approved**（2026-10-02 评审通过 —— 见 `design/gdd/reviews/ore-veins-review-log.md`）
 > **Category**: World · **Layer**: Feature · **Priority**: T3
 > **Depends On**: **C1**（深度的分布规则）· **A1**（元素表与"是否矿脉专属"字段）
 > **被依赖**: **2 个**（C3 飞船与零件 · C4 程序生成）

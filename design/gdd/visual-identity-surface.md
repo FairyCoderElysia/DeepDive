@@ -1,6 +1,6 @@
 # B13 · 视觉身份·表层（Visual Identity · Surface）
 
-> **Status**: Draft（骨架 —— 已定的写清，未定的标 `[待定]`；我的建议标 `[待确认]`）
+> **Status**: **Approved**（2026-10-02 评审通过 —— 见 `design/gdd/reviews/visual-identity-surface-review-log.md`）
 > **Category**: Visual · **Layer**: Presentation · **Priority**: T2
 > **Depends On**: **A1**（元素的分类组）
 > **被依赖**: **0 个** —— 口径：`systems-index` 的 `Depends On` 列含 `B13` 的行数

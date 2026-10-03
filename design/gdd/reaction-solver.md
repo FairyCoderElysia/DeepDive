@@ -1,6 +1,6 @@
 # A3 · 反应求解器（Reaction Solver）
 
-> **Status**: Draft（骨架 —— 已定的写清，未定的标 `[待定]`；我的建议标 `[待确认]`）
+> **Status**: **Approved**（2026-10-02 评审通过 —— 见 `design/gdd/reviews/reaction-solver-review-log.md`）
 > **Category**: Core · **Layer**: Foundation · **Priority**: T1
 > **Depends On**: **A1**（整数原子池 + 参数 schema）· **A2**（化合物组成 + 步骤表）
 > **被依赖**: **8 个**（A5 · A6 · B2 · B4 · B5 · B7 · B10 · C3）

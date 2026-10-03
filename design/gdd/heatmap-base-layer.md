@@ -1,6 +1,6 @@
 # B12 · 热力图主图层（Heatmap as the Base Layer）
 
-> **Status**: Draft（骨架 —— 已定的写清，未定的标 `[待定]`；我的建议标 `[待确认]`）
+> **Status**: **Approved**（2026-10-02 评审通过 —— 见 `design/gdd/reviews/heatmap-base-layer-review-log.md`）
 > **Category**: UI · **Layer**: Presentation · **Priority**: T2
 > **Depends On**: **A5**（节点的当前读数）· **B4**（氧的分布与流量）· **B2**（结垢的分布与程度）
 > **被依赖**: **0 个** —— 口径：`systems-index` 的 `Depends On` 列含 `B12` 的行数

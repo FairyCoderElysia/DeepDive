@@ -1,6 +1,6 @@
 # B15 · 音频（Audio）
 
-> **Status**: Draft（骨架 —— 已定的写清，未定的标 `[待定]`；我的建议标 `[待确认]`）
+> **Status**: **Approved**（2026-10-02 评审通过 —— 见 `design/gdd/reviews/audio-review-log.md`）
 > **Category**: Audio · **Layer**: Presentation · **Priority**: **T2**
 > **Depends On**: **B5**（灾难签名）· **B1**（连线动作）
 > **被依赖**: **0 个** —— 口径：`systems-index` 的 `Depends On` 列含 `B15` 的行数

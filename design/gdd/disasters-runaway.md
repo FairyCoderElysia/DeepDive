@@ -1,6 +1,6 @@
 # B5 · 灾难与失控（Disasters & Runaway）
 
-> **Status**: Draft（骨架 —— 已定的写清，未定的标 `[待定]`；我的建议标 `[待确认]`）
+> **Status**: **Approved**（2026-10-02 评审通过 —— 见 `design/gdd/reviews/disasters-runaway-review-log.md`）
 > **Category**: Gameplay · **Layer**: Foundation · **Priority**: T1
 > **Depends On**: **A6**（越界段的代价形状）· **A3**（灾难触发信号）
 > **被依赖**: **2 个**（B10 诊断与反馈 · **B15 音频**）

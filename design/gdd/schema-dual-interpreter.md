@@ -1,6 +1,6 @@
 # A4 · Schema 双解释器与契约校验（Schema Dual-Interpreter & Contract Validation）
 
-> **Status**: Draft（骨架 —— 已定的写清，未定的标 `[待定]`；我的建议标 `[待确认]`）
+> **Status**: **Approved**（2026-10-02 评审通过 —— 见 `design/gdd/reviews/schema-dual-interpreter-review-log.md`）
 > **Category**: Core · **Layer**: Foundation · **Priority**: T1
 > **Depends On**: **A1**（元素表 schema + 参数 schema）· **A2**（化合物与步骤 schema + `schema_version`）
 > **被依赖**: **0 个** —— **全项目第一个"终端系统"**（口径：`systems-index` 的 `Depends On` 列含 `A4` 的行数）
@@ -125,7 +125,12 @@ vN --(声明 vN->vN+1 的四原语)--> vN+1 --(继续)--> ... --> 目标版本
 （那与 A3 的对账锁同源：**宁可拒绝，不可留下不可信的状态**）。
 
 ### Interactions with Other Systems
-**本节的形状与前三个系统不同**：A4 主要**对上游提要求**，只对唯一的下游交付一样东西。
+**上游 2 个**：A1 · A2（见下）。
+**下游 1 个**：**B16**（见「### 下游 1 个：B16」—— 契约表在那一节）。
+
+> 口径：`systems-index` 的 `Depends On` 列含 `A4` 的行数 = **1**（B16）。
+> ⚠️ 原句写的是"本节的形状与前三个系统不同"—— 那是 A4 作为第 4 个系统时的实情；
+> 后来全项目统一成"§Interactions 里放下游契约表"的写法，故此处已对齐（契约表位置不变）。
 
 ### 上游 2 个：A1 · A2
 
