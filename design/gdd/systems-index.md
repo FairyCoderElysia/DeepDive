@@ -38,7 +38,7 @@
 | 2 | A2 化合物与反应数据表 `(inferred)` | Core | T1 | **Approved** | design/gdd/compound-reaction-data.md | A1 |
 | 3 | A3 反应求解器（限制试剂·化学计量） | Core | T1 | **Approved** | design/gdd/reaction-solver.md | A1, A2 |
 | 4 | A4 Schema 双解释器与契约校验 | Core | T1 | **Approved** | design/gdd/schema-dual-interpreter.md | A1, A2 |
-| 5 | A5 工艺图与连续流求解 | Core | T1 | **In Design** | design/gdd/process-graph.md | A3 |
+| 5 | A5 工艺图与连续流求解 | Core | T1 | **Approved** | design/gdd/process-graph.md | A3 |
 | 6 | A6 参数与代价面 | Core | T1 | Not Started | — | A3 |
 | 7 | B1 连线编辑与四种连线决策 | Gameplay | T1 | Not Started | — | A5, B2, B3, B4 |
 | 8 | B2 污染物与失败通道（Cl / 结垢） | Gameplay | T1 | Not Started | — | A3, A6 |
@@ -233,9 +233,9 @@
 |--------|-------|
 | Total systems identified | **29** |
 | Design docs started | **5** |
-| Design docs reviewed | **4**（A1 · A2 · A3 · A4，Verdict 均 APPROVED） |
+| Design docs reviewed | **5**（A1 · A2 · A3 · A4 · A5，Verdict 均 APPROVED） |
 | Design docs approved | 0 |
-| **T1（垂直切片）系统已设计** | 4 / **16**（A1 · A2 · A3 · A4 已评审 APPROVED；**A5 骨架已建、在设计**） |
+| **T1（垂直切片）系统已设计** | 5 / **16**（A1 · A2 · A3 · A4 · A5 均已评审 APPROVED） |
 | **T2（MVP）系统已设计** | 0 / **7** |
 | **T3（完整愿景）系统已设计** | 0 / **6** |
 
