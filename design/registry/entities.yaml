@@ -511,6 +511,20 @@ formulas:
       （深处更贵、更想知道哪里不对）-> 所以选【组合】。
     referenced_by: [visual-identity-depth]
 
+  - name: process_card_structure
+    description: 工艺卡上有什么。
+    expression: |
+      工艺卡 = { 名字, 拓扑（子图：哪些节点/哪些边）, 参数（每个节点的旋钮值）, 代价（能耗/纯度/耗时） }
+    sources: "拓扑与参数来自 A5；代价来自 A6（由 B7 的立场呈现）"
+    not_an_encoding: "它是【渲染出来的】，不是【序列化的编码】—— 见 CARD_IS_RENDERED_NOT_ENCODED"
+    referenced_by: [process-naming-cards]
+
+  - name: no_auto_optimization
+    description: 一条明确的"不做"清单（概念文档 line 281）。
+    expression: "❌ 评分  ❌ 排名  ❌ '建议改用 X'  ❌ 自动寻优"
+    source: "概念文档：'工艺的命名、复用、优化都归玩家；系统不替玩家自动寻优'"
+    referenced_by: [process-naming-cards]
+
 constants:
 
   # ---------- 计量与口径 ----------
@@ -1373,3 +1387,36 @@ constants:
     value: "(待定) 四条曲线是否共享同一个归一化 —— 否则会出现'很暗但不冷'"
     note: "已列入 Open Questions。不共享会让四维各自到达极值的时机不同，体感会散。"
     referenced_by: [visual-identity-depth]
+
+  # ---------- B9 引入的常量 ----------
+
+  - name: CARD_EXPORT_ONLY
+    value: "工艺卡只能导出、【不能导入】"
+    protecting: "概念文档 line 259：'工艺是玩家自己发明的、命名的 —— 它不能被系统替代，这是最强的留存'"
+    reason: |
+      导入恰恰就是"可被替代"的实现：若卡片能一键复现，玩家的工艺就不再是他自己的。
+      而"分享"在概念文档里的形态是"起名、截图、分享工艺卡"——那是【展示】，不是【安装】。
+      -> 所以"不导入"不是保守，而是那句话的直接实现。
+    social_consequence: "本作唯一的那一点社交因此是【单向的】：你能让别人看见你的工艺，但别人拿不走它"
+    referenced_by: [process-naming-cards]
+
+  - name: CARD_IS_RENDERED_NOT_ENCODED
+    value: "工艺卡是【渲染出来的】，不是【序列化的编码】"
+    side_effect: |
+      A4 已定"存档是二进制、JSON 会坏 int64"，所以任何新的分享格式都要自己承担那个风险；
+      而渲染出来的卡根本不碰那条约束。
+      -> "不导入"与"不做编码"是同一件事的两面：【没有格式，就没有格式的债】。
+    referenced_by: [process-naming-cards]
+
+  - name: PARALLEL_NO_EVALUATION
+    value: "与百科的路线的对照方式：能并列、不评价"
+    satisfies_two: |
+      ① 概念文档禁的是"寻优"而不是"展示"；
+      ② B7 的立场是"给一条可行解，并让玩家看见它的代价"（给数据，不给结论）。
+    same_discipline_as: "与 B7 的'预告结果、不解释原因'是同一条纪律，只是换了一个界面"
+    referenced_by: [process-naming-cards]
+
+  - name: SYSTEM_DOES_NOT_OPTIMIZE
+    value: "系统不替玩家自动寻优 —— 命名、复用、优化都归玩家"
+    source: "概念文档 line 281"
+    referenced_by: [process-naming-cards]
