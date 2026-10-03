@@ -309,6 +309,13 @@ formulas:
       而"承担自己选择的后果"正是 P2 与 P3 的交汇点。
     referenced_by: [disasters-runaway]
 
+  - name: connection_is_a_decision
+    description: 一种连线决策成立的判据 —— 它必须能产生不同的结果。
+    expression: "一种连线决策成立  <=>  同一个场景下，不同的接法会产生【不同的结果】"
+    variables: [接法, 结果]
+    use: "这是 B1 验收第 1 条的依据 —— 若两种接法结果相同，那它就不是决策"
+    referenced_by: [connection-decisions]
+
 constants:
 
   # ---------- 计量与口径 ----------
@@ -634,3 +641,46 @@ constants:
       界面上必须可区分 —— 否则玩家看到"我的机器停了"却不知道该怎么办，
       而四种停法的修法互不通用。
     referenced_by: [disasters-runaway]
+
+  # ---------- B1 引入的常量 ----------
+
+  - name: NO_ILLEGAL_CHEMISTRY
+    value: "不用'非法'去阻止化学错误 —— 只保证端口存在、能接"
+    note: "混料 / 接回上游 / 回流过量 / 自环【全部允许】—— 它们是教学内容，不是要拦住的东西。"
+    why: |
+      概念文档的失败模式表里，那些"错接"全部写的是【后果】与【玩家学到什么】，而不是"被禁止"。
+      禁掉它们等于禁掉教学内容。-> 真正的负担当不在"拦截"，而在"可诊断"。
+    consequence: |
+      本作的"合法性判定"几乎是空的（唯一的结构限制是"端口不存在"；
+      而"类型接不上"在本作也极小，因为所有物流都是化合物）。
+      【已据此回补 A5：它那句"合法性判定"措辞过宽，已改成"端口存在性"。】
+    referenced_by: [connection-decisions]
+
+  - name: T1_CONNECTION_DECISIONS
+    value: [纯化支线接在哪一级, 出口选路, 回流]
+    note: "T1 做的三种连线决策（④ 分流比例属 T3）。"
+    disambiguation: |
+      ② 出口选路与 ④ 分流比例【不是同一件事】：
+      ② 是"一台机器有多个出口、每个各接一处"（T1）；
+      ④ 是"一个出口的产出分给多个下游"（T3）。
+    f1_target: "F1 要验证的正是这三种在【多级、可自由布线】时是否仍然好玩 —— 那是 T1 的头号目标"
+    referenced_by: [connection-decisions]
+
+  - name: PREVIEW_RESULT_NOT_CONCLUSION
+    value: "连线时可以预告【结果】，但不替玩家解释【原因】、也不给结论"
+    note: "例如显示'氯氧化比 -> 48.8%'，但不弹'建议不要接'。"
+    why: |
+      T0 v4 那个"啊我不该那样接"来自玩家的【心智模型错了】（他以为循环利用是对的），
+      不是来自信息缺失。玩家看到数字仍会连上去、然后才发现自己理解错了 -> 这才是教学；
+      而弹"建议不要接"会让决策被游戏替玩家做了。
+    same_as: "与 P1 的设计测试同源（'百科给一条可行解，并让玩家看见它代价'）"
+    referenced_by: [connection-decisions]
+
+  - name: NO_EDIT_MODE
+    value: "没有编辑态 / 运行态切换 —— 玩家在【运行中】改线"
+    note: "从连续流推出（无时限、不暂停）。"
+    consequence: |
+      B1 是"在一个一直在动的系统上做编辑"，它的手感问题（吸附、撤销、误触）比静态编辑器更尖锐 ——
+      因为世界不会为你停下来。
+    safety: "改线是安全的（A5 的澄清 3：边不持有物质、只承载速率）-> 删线不会泄漏物料"
+    referenced_by: [connection-decisions]
