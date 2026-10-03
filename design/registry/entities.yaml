@@ -158,6 +158,29 @@ formulas:
     boundary: "A5 只应用 A3 的语义，不重定义求值顺序"
     referenced_by: [process-graph]
 
+  - name: cost_surface_aggregation
+    description: 代价的聚合 —— 三项不是一个可加和的标量，而是一个权衡三角。
+    expression: "代价(参数点 p) = { 能耗(p), 耗时(p), 纯度(p) }"
+    variables: [参数点, 能耗, 耗时, 纯度]
+    nature: |
+      能耗 = 付出、耗时 = 付出、纯度 = 所得。
+      所以它是【2 项付出 + 1 项所得】，不是三项同类清单。
+    forbidden: "不得把三项加权成一个'总代价分数' —— 那会把权衡压平，玩家就看不到取舍了"
+    source_of_items: "构成项（能耗/纯度/耗时）出自概念文档 P1 的设计测试原话，【不是 A6 新定的】"
+    referenced_by: [parameters-cost-surface]
+
+  - name: single_knob_slice
+    description: 5 维代价面的默认降维方式 —— 单旋钮切片。
+    expression: "切片(p, 旋钮 k) = { 代价(p 但把 k 从 lo 扫到 hi) }，其余 4 个旋钮固定为 p 的值"
+    variables: [参数点, 旋钮 k]
+    output: "一条曲线（代价随该旋钮变化）"
+    why: |
+      5 个旋钮的代价面是 5 维，无法直接呈现。
+      默认必须是单旋钮切片，理由是操作性的：玩家一次调一个旋钮 ——
+      界面要对齐的是"这一个旋钮往左/往右，代价怎么变"，而不是"整个空间长什么样"。
+    not_provided: "全维视图（5 维无法呈现；强行降到 2 维会丢掉玩家正在调的那一维）"
+    referenced_by: [parameters-cost-surface]
+
 constants:
 
   # ---------- 计量与口径 ----------
@@ -243,31 +266,31 @@ constants:
     value: { min: 20, max: 200, default: 80 }
     unit: "°C"
     note: "温度 T。范围来自 T0 实测（每个旋钮都已验过存在内部最优，非单调）。默认值【暂从 T0 继承】，正式值应在 T1 按手感重调。"
-    referenced_by: [element-pool, compound-reaction-data, reaction-solver]
+    referenced_by: [element-pool, compound-reaction-data, reaction-solver, parameters-cost-surface]
 
   - name: param_pressure
     value: { min: 1, max: 40, default: 6 }
     unit: "atm"
     note: "压强 P。⚠️ 注意与「深度带来的压强」区分：那属 C1（T3），本旋钮是反应器的一个工艺参数（MVP 即有）。"
-    referenced_by: [element-pool, compound-reaction-data, reaction-solver]
+    referenced_by: [element-pool, compound-reaction-data, reaction-solver, parameters-cost-surface]
 
   - name: param_residence_time
     value: { min: 0.5, max: 15, default: 4.0 }
     unit: "相对"
     note: "停留时间 τ。"
-    referenced_by: [element-pool, compound-reaction-data, reaction-solver]
+    referenced_by: [element-pool, compound-reaction-data, reaction-solver, parameters-cost-surface]
 
   - name: param_catalyst
     value: { options: [无催化剂, 镍网, 铂片], default: 铂片 }
     unit: "枚举 3"
     note: "催化剂。"
-    referenced_by: [element-pool, compound-reaction-data, reaction-solver]
+    referenced_by: [element-pool, compound-reaction-data, reaction-solver, parameters-cost-surface]
 
   - name: param_anode_material
     value: { options: [石墨阳极, 钌铱涂层钛_析氯型, 铱钽涂层钛_析氧型], default: 铱钽涂层钛_析氧型 }
     unit: "枚举 3"
     note: "阳极材料。**它存在的唯一理由是氯污染通道** —— 若砍掉 Cl 通道，本旋钮会变成死重、参数表必须退回 4 个。"
-    referenced_by: [element-pool, compound-reaction-data, reaction-solver]
+    referenced_by: [element-pool, compound-reaction-data, reaction-solver, parameters-cost-surface]
 
   # ---------- A2 引入的常量 ----------
 
@@ -282,7 +305,7 @@ constants:
     value: "[a, b) 左闭右开"
     note: "条件区间的取法约定（最优带 / 偏移带 / 越界三段均适用）。避免同一点同时属于两段。"
     companion_rule: "同一输入的各分支区间必须不重叠、不留缝 —— 否则出现'平局'或'无人区'（导入期校验）"
-    referenced_by: [compound-reaction-data, reaction-solver]
+    referenced_by: [compound-reaction-data, reaction-solver, parameters-cost-surface]
 
   # ---------- A3 引入的常量 ----------
 
@@ -337,3 +360,17 @@ constants:
     note: "环上不动点的迭代上限（与 A3 的层内上限同量级）。达上限 -> 采用当前值 + 告警。"
     needs: "需与 B19 联调（它决定一个 tick 装得下多少）"
     referenced_by: [process-graph]
+
+  # ---------- A6 引入的常量 ----------
+
+  - name: COST_ITEMS
+    value: [能耗, 耗时, 纯度]
+    note: "代价的三项。性质不同：能耗/耗时是付出，纯度是所得。"
+    source: "概念文档 P1 的设计测试（'让玩家看见它的代价（能耗 / 纯度 / 耗时）'）—— 早先已定，非本系统新定"
+    referenced_by: [parameters-cost-surface]
+
+  - name: COST_CURRENCY_RULE
+    value: "代价只能以物质与能量计价；核心计价物是氧（无货币）"
+    note: "来自 Core Mechanics #6（无货币）与 #5（氧的双角色：生命维持 + 工业能源，同一个数字）。"
+    why_hard: "概念文档注明：'这条不是少做一个系统，而是一条会管住所有其它系统的硬约束'"
+    referenced_by: [parameters-cost-surface]
