@@ -775,14 +775,38 @@ constants:
 
   - name: COST_CURRENCY_RULE
     value: "代价只能以物质与能量计价；核心计价物是氧（无货币）"
-    note: "来自 Core Mechanics #6（无货币）与 #5（氧的双角色：生命维持 + 工业能源，同一个数字）。"
+    note: "来自 Core Mechanics #6（无货币）与 #5（氧的双角色：生命维持 + **助燃物**，同一个数字）。能量是独立的一个量，见 ENERGY_IS_AN_EDGE。"
     why_hard: "概念文档注明：'这条不是少做一个系统，而是一条会管住所有其它系统的硬约束'"
     referenced_by: [parameters-cost-surface]
+
+  # ---------- B4 / C1 引入的常量（2026-10-03：氧的定位改动）----------
+
+  - name: ENERGY_IS_AN_EDGE
+    value: "能量是一个【独立的物理量】，且它在工艺图上【是一条边】"
+    note: |
+      氧**不再是「能量本身」** —— 它退回两个真实角色：**生命维持 + 助燃物**。
+      能量的来源分两层：**浅层 = 光**（环境条件：免费、非物质的、随深度衰减到零）·
+      **深层 = 燃料**（矿脉里的还原态物质，如 C）+ **按化学计量配的氧**。
+      「能量上网」这一半**已定、但实现推迟**：T1 里浅层光充足 ⇒ 既不需要燃料输入、也不需要能量边，
+      所以它推迟到**深度轴变成真的（T3/C1）时**才落地 —— 而 A5 的图届时要从「只跑物质」扩到「也跑能量」。
+    decided: "用户拍板（2026-10-03，三选一里选此项）"
+    does_not_weaken: "OXYGEN_ROLES —— 氧仍是唯一硬通货，仍是被生命与工业两边拉的同一个数字"
+    referenced_by: [oxygen-economy, depth-layers, process-graph]
+
+  - name: LIGHT_DECAYS_WITH_DEPTH
+    value: "光(d) = 单调下降(d)，到某深度归零"
+    note: |
+      浅层的**免费能量来源**；它是 C1 深度函数里的**第一条「不是物质」的函数**
+      （其余三条：带宽 / 速度 / 耗氧）。
+      ⚠️ **接缝约束**：光的归零深度**不得早于燃料矿脉的出现深度** —— 否则出现
+      「已经没光了、却还挖不到燃料」的死区。
+      ⚠️ **T1 不实现**：MVP 刻意只在最浅层（Risk #8）⇒ T1 里光是「充足」的常量。
+    referenced_by: [depth-layers, ore-veins, oxygen-economy]
 
   # ---------- B4 引入的常量 ----------
 
   - name: OXYGEN_ROLES
-    value: "生命维持 + 工业能源（助燃物）—— 同一个数字"
+    value: "生命维持 + 助燃物 —— 同一个数字（2026-10-03 澄清：氧不再是「能量本身」）"
     note: "Core Mechanics #5。本作唯一的硬通货（Core Mechanics #6：无货币、无市场、无售价）。"
     hard_constraint: "不得拆成两个池 —— 拆了就拆掉了整个张力的支点（这是本系统第一号不可违反的约束）"
     referenced_by: [oxygen-economy]
