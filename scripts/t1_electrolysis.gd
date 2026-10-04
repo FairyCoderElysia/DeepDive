@@ -24,6 +24,7 @@ extends Control
 const TABLE: CompoundData = preload("res://data/reactions.tres")
 const SOLVER := preload("res://scripts/reaction_solver.gd")
 const GRAPH := preload("res://scripts/process_graph.gd")
+const OE := preload("res://scripts/oxygen_economy.gd")
 
 const WATER := {&"H": 2, &"O": 1}
 const SALT := {&"Na": 1, &"Cl": 1}          # NaCl
@@ -53,6 +54,15 @@ var _compounds: Dictionary = {}
 var _widgets := {}
 var _intakes: Array = []
 var _tick := 0
+## ★ B4：生命维持耗氧的**分数余量**（单位 ×SCALE）。
+##   ⚠️ **氧余额【不】放在这里** —— 它由 `_compounds` 持有（那是唯一的数字，Core Rule ②）。
+##   这里只是"攒够一个才动账"的那个余量（与 A1 的余数累加器同一条纪律）。
+var _o2_residual_scaled := 0
+## 本 tick 的三级分配结果（B4 的 ③）—— **只是"这次谁拿到了多少"，不是三个池**。
+var _o2_alloc: Dictionary = {}
+## 本 tick 的产氧量（氧/秒）—— 由 A3 的事实折算，B4 只消费它。
+var _o2_produced_this_tick := 0.0
+var _made_this_tick: Dictionary = {}
 var _temp := 45.0
 
 
@@ -190,6 +200,23 @@ func _ready() -> void:
 		push_error("取料不足：%s 请求 %d 只有 %d —— 调用方的错" % [e, req, avail]))
 
 
+## ★ **那个唯一的氧余额** —— 它住在化合物账里（B4 的 Core Rule ②：氧只有一个池）。
+func _o2_stock() -> int:
+	return int(_compounds.get(OE.O2_KEY, 0))
+
+
+## B4 的一行账：**存量 + 速率 + 状态**（§States 要求两者都要：速率回答"往里还是往外"，
+## 存量回答"还能撑多久"）。
+func _o2_banner() -> String:
+	var produced := _o2_produced_this_tick
+	var industrial := 0.0                              # 浅层：光免费 ⇒ 工业耗氧 = 0
+	var rate := OE.net_rate(produced, industrial)
+	var alloc := _o2_alloc
+	return "O₂=%d 收支=%+.3f/s %s ｜ 生命维持分到 %.3f" % [
+		_o2_stock(), rate, OE.state_of(_o2_stock(), rate),
+		float(alloc.get("life_support", 0.0))]
+
+
 func _step() -> void:
 	_tick += 1
 	_temp += TEMP_PER_TICK
@@ -202,10 +229,27 @@ func _step() -> void:
 		if whole > 0 and _pool.add_formula(it["formula"], whole):
 			_add_compound(it["formula"], whole)
 
+	# ①.5 ★ B4：**生命维持真的在呼吸** —— 每 tick 从那个唯一的氧余额里扣。
+	#   ⚠️ 余额就是 `_compounds[OE.O2_KEY]`（A5 的化合物账）—— **没有第二个数字**。
+	#   扣不动时**不发明死亡机制**：按 B4 的三级优先如实算出"谁拿到了氧"，然后打印出来。
+	var o2_stock := _o2_stock()
+	var life := OE.net_rate(0.0, 0.0)                 # 只有生命维持那一项（浅层无工业耗氧）
+	var life_int := OE.integrate(o2_stock, life, 1.0 / float(TICK_HZ), _o2_residual_scaled)
+	var o2_after := int(life_int["stock"])
+	_o2_residual_scaled = int(life_int["residual_scaled"])
+	if o2_after != o2_stock:
+		_add_compound_by_key(OE.O2_KEY, o2_after - o2_stock)   # 差额（负 = 被呼吸掉）
+	# 三级优先：把"这一 tick 谁拿到了氧"如实算出来（存量不够时低优先级被压缩）
+	_o2_alloc = OE.allocate(float(o2_stock) / (1.0 / float(TICK_HZ)),
+			OE.LIFE_SUPPORT_RATE, 0.0, 0.0)
+
 	# ② 反应（走 A2 的表）：攒够整数批才做
 	var batches := _pool.accumulate(&"reactor", &"batch", BATCH_PER_TICK_SCALED)
 	if batches > 0:
 		_run_reaction(batches)
+
+	# ②.5 记下本 tick 的**产氧量**（供 B4 算收支用；它是 A3 的事实，B4 只消费）
+	_o2_produced_this_tick = float(_made_this_tick.get(OE.O2_KEY, 0)) / (1.0 / float(TICK_HZ))
 
 	# ③ 对账：每一 tick 都要过，全程整数比较、无容差（A1 的 ⑤）
 	if not _pool.conservation_ok():
@@ -217,6 +261,7 @@ func _step() -> void:
 			_tick, _temp, _contract_banner(),
 			_pool.count(&"H"), _pool.count(&"O"), _pool.total(),
 			_compound_line(), "OK" if _pool.conservation_ok() else "FAIL"])
+		print("        【B4】%s" % _o2_banner())
 	if _tick >= RUN_TICKS:
 		_print_cost_slices()
 		print("—— 跑满 %d tick，退出（对账 %s）" % [RUN_TICKS, "通过" if _pool.conservation_ok() else "失败"])
@@ -230,7 +275,13 @@ func _run_reaction(batches: int) -> void:
 	#   将来加机器只需在 _ready 里 add_node + add_edge，本函数不用改。
 	for nid2: StringName in _graph.node_ids():
 		_graph.node(nid2)["conditions"] = {&"param_temperature": _temp}
+	# ★ B4 要读"本 tick 产了多少氧" —— 它是 A3 的事实，B4 只消费（不重算）
+	_made_this_tick = {}
 	var g_r: Dictionary = _graph.evaluate(_compounds, TABLE, _solver)
+	for nid0: StringName in (g_r["results"] as Dictionary):
+		for res0: Dictionary in g_r["results"][nid0]:
+			for k0: String in (res0.get("made", {}) as Dictionary):
+				_made_this_tick[k0] = int(_made_this_tick.get(k0, 0)) + int(res0["made"][k0])
 	# ★ 遍历【所有】节点 —— 一台机器一个结果；而不是只看某台
 	var by_node: Array = []
 	for nid: StringName in (g_r["results"] as Dictionary):
