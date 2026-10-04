@@ -1,19 +1,23 @@
 class_name OxygenEconomy
 extends RefCounted
-## B4 · 氧气经济 —— **本作唯一的记账层**
+## B4 · 氧气经济 —— **本作唯一的记账层**（**纯函数集：它不持有任何余额**）
 ##
 ## 【它的形状与前面六个系统都不同】A1–A6 给事实与表达；**B4 把事实记成一本以氧为单位的账**
 ## （`oxygen-economy.md` §Overview：它的定位不是"一个资源系统"，而是"**代价的记账单位**"）。
 ##
-## ⚠️ **本系统第一号不可违反的约束（Core Rule ②）**：
-##   **氧只有一个池。** 它同时是**生命维持**与**助燃物**，而**这两件事是同一个数字**。
-##   任何把它拆成"生命维持氧 / 工业氧"两个数字的实现，**都会拆掉整个张力的支点**。
-##   ★ 而"三级优先分配"（③）是**在同一个数字上的分配顺序**，**不是三个池** ——
-##     这两件事极容易被混为一谈（"分成三层"听起来像"分成三个池"），所以写在最前面。
+## ⚠️⚠️ **第一号不可违反的约束（Core Rule ②）：氧只有一个池。** ⚠️⚠️
+##   它同时是**生命维持**与**助燃物**，而**这两件事是同一个数字**。
+##   任何把它拆成两个数字的实现，**都会拆掉整个张力的支点** ——
+##   而"两个数字"**不限于按角色分**：**"谁持有"分出两份也是两个数字。**
+##
+##   ★ 所以**本类【故意不持有余额】**（2026-10-03 用户拍板）：
+##     那个【唯一的数字】由**化合物账**持有（A5/A2 的账里 `O2` 这一个化合物的存量），
+##     而 B4 只提供**纯函数**：算收支 · 算状态 · 算分配 · 算积分。
+##     ⇒ "只有一个池"这件事**在结构上成立**：**这里没有地方可以漂移出第二个数。**
+##     （若本类自己也存一份，那就会有两个数字 —— 而它们是会飘的。）
 ##
 ## 【它不拥有什么】（§Tuning Knobs 的边界，必须写明）
 ##   参数旋钮属 **A1** · 档位属 **B3** · 罐容上限属 **B6** · 代价的呈现属 **A6**。
-##   **B4 只定义"氧的收支如何计算、如何分配、如何成为唯一的记账单位"。**
 ##
 ## 【"游离氧"怎么认】（④ 的实现边界）
 ##   **不需要改 A1 或 A3** —— 游离氧**就是 A2 化合物表里的 `O₂` 那个化合物**。
@@ -27,7 +31,7 @@ const O2_KEY := "O2"
 
 # ────────────────────────────────────────────────────────────────────────────
 # ⚠️⚠️ 以下四个数在 B4 的 GDD 里**全部是 `[待定]`**（§Tuning Knobs）。
-#     我把它们做成常量并**逐个标"暂定"**，是为了让账目层能被测试 ——
+#     做成常量并**逐个标"暂定"**，是为了让账目层能被测试 ——
 #     **但它们没有被定过**：它们是"先让它能跑"，不是"设计结论"。
 #     其中第一个（生命维持率）GDD 原话是「**决定整个游戏的紧张度** —— 它是最重要的一个数」，
 #     而它的手感取决于另一个数（C1 的表层通量天花板），那个还没实现。
@@ -56,38 +60,26 @@ const STATE_BALANCED := "balanced"
 const STATE_DEFICIT := "deficit"
 const STATE_DEPLETED := "depleted"
 
-## 存量（单位：化合物数 × SCALE）。**只有一个** —— 见文件头的 ②。
-var stock_scaled: int = 0
 
-## 净收支的分数余量（单位：× SCALE）。**速率攒够一个才动账**，余量留下 ——
-## 与 A1 的余数累加器同一条纪律（**不得每 tick 丢弃小数**，否则会静默少氧）。
-var _residual_scaled: int = 0
+# ============================================================ ① 收支（纯函数）
 
-
-func _init(initial_stock: int = 0) -> void:
-	stock_scaled = maxi(initial_stock, 0) * SCALE
-
-
-## 当前游离氧存量（整数个 `O₂`）。**这是唯一的存量读数**。
-func stock() -> int:
-	return stock_scaled / SCALE
-
-
-## 本 tick 的收支（四项相减）。返回**速率**，不改变任何状态。
+## 本 tick 的收支**速率**。返回速率，**不改变任何东西** —— 本类没有任何东西可改。
 ##
 ## `produced`/`industrial`：来自 A3 的事实（本 tick 产氧 / 工业耗氧的速率）。
 ## `stored_amount`：当前存了多少（B6 提供），存贮耗氧 = 系数 × 存量 —— **是速率**。
 ## `destroyed_amount`：本 tick 销毁了多少物质。
-static func net_rate(produced: float, industrial: float, stored_amount: float,
-		destroyed_amount: float) -> float:
+static func net_rate(produced: float, industrial: float, stored_amount: float = 0.0,
+		destroyed_amount: float = 0.0) -> float:
 	return produced - (industrial + LIFE_SUPPORT_RATE
 			+ STORAGE_COEF * stored_amount + DESTROY_COEF * destroyed_amount)
 
 
-## **三级优先分配**（F-B4-1）：氧紧张时，按 生命维持 > 产氧链 > 其他工业 的顺序分配。
+# ============================================================ ③ 三级优先（纯函数）
+
+## **三级优先分配**（F-B4-1）：氧紧张时按 生命维持 > 产氧链 > 其他工业 的顺序分配。
 ##
-## ⚠️ 这不是"三个池" —— 它只是**同一池在不够分时的分配顺序**。
-## 返回 `{life_support, oxygen_chain, other_industry, unfunded}`（各项都不超过各自的需求量）。
+## ⚠️ 这**不是"三个池"** —— 它只是**同一个数字不够分时的分配顺序**。
+## **它不产生任何存量**：返回的只是"这一 tick 各自分到多少"，而**余额仍只有那一个**。
 static func allocate(available: float, need_life: float, need_chain: float,
 		need_industry: float) -> Dictionary:
 	var left := maxf(available, 0.0)
@@ -101,45 +93,40 @@ static func allocate(available: float, need_life: float, need_chain: float,
 	return out
 
 
-## 走一个 tick：把四项速率积分进存量。返回本 tick 的账目快照。
-##
-## ★ 纪律：**速率攒够一个才动账，余量留下**（与 A1 同）——
-## 否则每 tick 丢掉小数，氧会**静默地**少下去。
-func step(dt: float, produced: float, industrial: float,
-		stored_amount: float = 0.0, destroyed_amount: float = 0.0) -> Dictionary:
-	var net := net_rate(produced, industrial, stored_amount, destroyed_amount)
-	# 先按分配顺序算"实际能拿到多少"（存量不够时，低优先级要被压缩）
-	var tight := is_tight()
-	if tight and net < 0.0:
-		var alloc := allocate(float(stock()) / maxf(float(dt), 0.000001),
-				LIFE_SUPPORT_RATE, industrial, 0.0)
-		# 只允许"生命维持 + 产氧链"这两级吃氧，其他工业被压到 0
-		net = produced - (alloc["life_support"] + alloc["oxygen_chain"]
-				+ STORAGE_COEF * stored_amount + DESTROY_COEF * destroyed_amount)
-	_residual_scaled += int(round(net * dt * float(SCALE)))
-	var whole := _residual_scaled / SCALE            # 向零取整（C++ 语义：负数也朝零）
-	_residual_scaled -= whole * SCALE                # **余量留下**，不丢
-	stock_scaled = maxi(stock_scaled + whole * SCALE, 0)   # 不得为负：耗竭就是 0
-	return {"stock": stock(), "rate": net, "state": state(net), "tight": tight}
-
-
-## 账目状态（§States）。`delta` = 本 tick 的净收支速率。
-func state(delta: float = 0.0) -> String:
-	if stock() <= 0 and delta < 0.0:
-		return STATE_DEPLETED
-	if absf(delta) < 0.000001:
-		return STATE_BALANCED
-	return STATE_SURPLUS if delta > 0.0 else STATE_DEFICIT
-
-
 ## 存量比例（0–1），用于判断"该不该切到分配"。`capacity` 由 **B6** 给（B4 不拥有罐容）。
-func stock_ratio(capacity: float) -> float:
+static func stock_ratio(stock: int, capacity: float) -> float:
 	if capacity <= 0.0:
 		return 0.0
-	return clampf(float(stock()) / capacity, 0.0, 1.0)
+	return clampf(float(stock) / capacity, 0.0, 1.0)
 
 
-func is_tight(capacity: float = 0.0) -> bool:
+static func is_tight(stock: int, capacity: float) -> bool:
 	if capacity <= 0.0:
 		return false
-	return stock_ratio(capacity) < TIGHT_THRESHOLD
+	return stock_ratio(stock, capacity) < TIGHT_THRESHOLD
+
+
+# ============================================================ §States（纯函数）
+
+## 账目状态。`stock` 由**化合物账**给出（本类不持有），`rate` 是本 tick 的净收支速率。
+static func state_of(stock: int, rate: float = 0.0) -> String:
+	if stock <= 0 and rate < 0.0:
+		return STATE_DEPLETED
+	if absf(rate) < 0.000001:
+		return STATE_BALANCED
+	return STATE_SURPLUS if rate > 0.0 else STATE_DEFICIT
+
+
+# ============================================================ 积分（纯函数）
+
+## 把一个**速率**积分进存量：返回 `{stock, residual_scaled}`。
+##
+## ★ 纪律：**速率攒够一个才动账，余量留下**（与 A1 的余数累加器同）——
+##   否则每 tick 丢掉小数，氧会**静默地**少下去。
+## ★ 而"余量"**不归本类持有**：它由调用方（持有那个唯一池的人）连余额一起保存 ⇒
+##   本类仍然是纯的，而"只有一个池 + 一个余量"这件事也仍然只有一个地方。
+static func integrate(stock: int, rate: float, dt: float, residual_scaled: int = 0) -> Dictionary:
+	var acc := residual_scaled + int(round(rate * dt * float(SCALE)))
+	var whole := acc / SCALE                 # 向零取整（负数也朝零）
+	var resid := acc - whole * SCALE         # **余量留下**，不丢
+	return {"stock": maxi(stock + whole, 0), "residual_scaled": resid}
