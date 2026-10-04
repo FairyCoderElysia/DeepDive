@@ -28,6 +28,23 @@ extends RefCounted
 ## 代价的三项。**顺序即语义**：前两个是付出、最后一个是所得。
 const COST_FIELDS := ["energy", "purity", "time"]
 
+## ★ 第 4 个量：`penalty`（偏离代价）—— **它是 A6 的表达，不是化学事实**（2026-10-03 用户拍板）。
+##
+## 为什么需要它：§Formulas ③ 要求「**偏移带内：上升且非线性**」，
+## 而 A2 的 δ 是**线性**的（按比例）⇒ 只拿 δ 算，偏移带内会是一条直线，**验收 2 不成立**。
+##
+## ⚠️ 三条边界（缺一条它就变成越界）：
+##   1. **它只是 `Σδₖ` 的函数** —— **不吞并** 能耗 / 耗时 / 纯度（§Formulas ① 禁的是"把权衡压平成总分"）
+##   2. **它是【表达】不是【事实】** ⇒ **不得被拿去当输入喂回 A2/A3**
+##   3. `Σδₖ` 本身**只读 A2 交出来的 `deltas`**，A6 **不自己重算 δ**（那就成了重新定义 A2 的语义）
+##
+## 形状：`penalty = (Σδ)^CURVATURE` —— 单调、**靠近最优带时几乎不痛、越靠近越界越肉痛**，
+## 那正是"**找平衡点而非最大值**"这个核心玩法的来源。
+const CURVATURE := 2.0        # ← A6 §Tuning Knobs 里那个 [待定] 的曲率参数（暂定 2.0）
+
+## 代价的四个量（给测试与消费方一个权威顺序；`penalty` 是 A6 的表达，见上）。
+const ALL_FIELDS := ["energy", "purity", "time", "penalty"]
+
 ## 5 个旋钮的规格来自**生成物**（真相源 = `design/schema/contract.yaml`；
 ## 权威 = 登记册的 `param_*`；两者的**逐字段一致**由 `--check` 证明，不是我抄了一遍）。
 const KNOBS := SchemaContract.KNOBS
@@ -52,7 +69,7 @@ static func cost_at(step: Dictionary, conditions: Dictionary,
 	#   否则代价面会说一种它并不知道的话（玩家会读成"这里零代价"）。
 	if band == "disaster":
 		return {
-			"energy": null, "purity": null, "time": null,
+			"energy": null, "purity": null, "time": null, "penalty": null,
 			"band": band, "disaster": String(ev.get("disaster", "")),
 			"conditions": conditions.duplicate(true),
 		}
@@ -61,10 +78,17 @@ static func cost_at(step: Dictionary, conditions: Dictionary,
 	var time_cost = null
 	if rate_per_unit > 0.0:
 		time_cost = 1.0 / rate_per_unit
+	# ★ `Σδₖ` 只**读** A2 交出来的 `deltas`（它已经在返回值里）—— A6 不重算 δ。
+	var sum_delta := 0.0
+	for k2: StringName in (ev.get("deltas", {}) as Dictionary):
+		sum_delta += float(ev["deltas"][k2])
 	return {
 		"energy": 0.0,                      # 浅层：光免费 ⇒ 0（深层要燃料时才会非 0）
 		"purity": float(ev.get("main_share", 0.0)),
 		"time": time_cost,
+		# 第 4 个量：**A6 的表达**（非线性），见文件头 —— 不吞并上面三项
+		"penalty": pow(sum_delta, CURVATURE),
+		"sum_delta": sum_delta,             # 交出来是为了可诊断（不是第 5 个代价项）
 		"band": band,
 		"disaster": String(ev.get("disaster", "")),
 		"conditions": conditions.duplicate(true),

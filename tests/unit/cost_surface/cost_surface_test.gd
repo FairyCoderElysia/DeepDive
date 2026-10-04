@@ -165,3 +165,63 @@ func test_purity_is_flat_in_the_optimal_band_and_falls_in_the_offset_band() -> v
 	# 越界段：A6 只**表达**它被标成灾难，后果与连锁归 B5
 	var e := CS.cost_at(s, _conds(200.0), t)
 	assert_str(String(e["disaster"])).is_not_equal("")
+
+
+# ============================================================ 验收 2：偏移带内的【非线性】
+
+## ★ 这是本轮新增的落点：§Formulas ③ 要求「偏移带内：**上升且非线性**」，
+##   而 A2 的 δ 是线性的 ⇒ 只拿 δ 算，偏移带内会是一条直线，**验收 2 就不成立**。
+##   所以加了第 4 个量 `penalty = (Σδ)^CURVATURE`（**A6 的表达，不是化学事实**）。
+##
+## 判别力从这里来：**取偏移带内的三个点，若 `penalty` 是线性的，
+## 那么中点值必须等于两端均值** —— 而 `d²` 不满足它。
+func test_offset_band_penalty_is_non_linear() -> void:
+	var t := _table()
+	var s := _step()
+	# 下偏移带 [20, 40)，opt_lo = 40：三个等距点 ⇒ δ = 1.0 / 0.5 / 0.0
+	var a := float((CS.cost_at(s, _conds(20.0), t))["penalty"])    # δ = 1.0
+	var m := float((CS.cost_at(s, _conds(30.0), t))["penalty"])    # δ = 0.5
+	var b := float((CS.cost_at(s, _conds(40.0), t))["penalty"])    # δ = 0.0（最优带边界）
+	assert_float(a).is_greater(m)
+	assert_float(m).is_greater(b)
+	# ★ 非线性判据：**中点值 ≠ 两端均值**（直线会相等）
+	var linear_mid: float = (a + b) / 2.0
+	# ⚠️ 第一版我用了 `assert_float(...).is_not_equal_approx(...)` —— **gdUnit4 6.2.0 里没有这个方法**，
+	#    它抛的是【Runtime Error】而不是断言失败 ⇒ 报表里记成 `errors=1` 而 **root 的 failures 仍是 0**
+	#    ⇒ 我差点把这一次读成绿的。改用 Godot 自带的 `is_equal_approx` + `assert_bool`。
+	assert_bool(is_equal_approx(m, linear_mid)).is_false()
+	assert_float(m).is_less(linear_mid)          # d² 在中点比直线低 ⇒ "靠近最优带时不痛"
+
+
+## ★ 最优带内 `penalty` 必须是 0（Σδ = 0）—— 否则"最优带"就没有意义了。
+func test_penalty_is_zero_inside_the_optimal_band() -> void:
+	var t := _table()
+	for temp in [60.0, 75.0, 89.0]:
+		var c := CS.cost_at(_step(), _conds(temp), t)
+		assert_float(float(c["penalty"])).is_equal_approx(0.0, 0.000001)
+
+
+## ★ 而它**不得吞并**另外三项：四项必须并存（§Formulas ① 禁的是"把权衡压平成总分"）。
+##   同时钉住：**它只是 `Σδ` 的函数**，所以最优带内三项照旧可读。
+func test_penalty_coexists_with_the_three_facts_instead_of_replacing_them() -> void:
+	var t := _table()
+	# ⚠️ 取值必须按**这条测试步骤自己的区间**算，不能照抄 T1 那份数据 ——
+	#    本步骤 opt_lo=60 / brk_lo=20 ⇒ 下偏移带宽 40，T=20 处 δ=1.0（**我第一版抄错了，测试红了**）。
+	var c := CS.cost_at(_step(), _conds(20.0), t)
+	for f: String in CS.ALL_FIELDS:
+		assert_bool(c.has(f)).is_true()
+	for f: String in CS.COST_FIELDS:
+		assert_bool(c.has(f)).is_true()
+	# 纯度仍是 A2 的事实 —— ⚠️ 我第一版把 coef_lo 也算进去了，**那是错的**：
+	#   A2 的式子是 `主产物占比 = max(0, 1 − Σδₖ)` —— **δ 不乘系数**（系数只进副产物的 share）。
+	#   ⇒ δ=1.0 时纯度就是 0.0（T1 场景里 T=20 那点打印的 0.0000 正是它，实测一致）。
+	assert_float(float(c["purity"])).is_equal_approx(0.0, 0.0001)
+	assert_float(float(c["sum_delta"])).is_equal_approx(1.0, 0.0001)
+	assert_float(float(c["penalty"])).is_equal_approx(1.0, 0.0001)   # 1.0² = 1.0
+
+
+## 越界端：`penalty` 也是"不适用"（与口径 2 的其它三项一致）。
+func test_penalty_is_not_applicable_in_the_disaster_band() -> void:
+	var t := _table()
+	var c := CS.cost_at(_step(), _conds(200.0), t)
+	assert_bool(c["penalty"] == null).is_true()

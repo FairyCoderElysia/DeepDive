@@ -126,7 +126,8 @@ func _print_cost_slices() -> void:
 	for i3 in mini(8, tp.size()):
 		var q: Dictionary = tp[i3]
 		var pv := "不适用" if q["purity"] == null else "%.4f" % float(q["purity"])
-		print("     T=%7.2f  band=%-9s 纯度=%s" % [float(q["knob_value"]), String(q["band"]), pv])
+		var pn := "不适用" if q["penalty"] == null else "%.4f" % float(q["penalty"])
+		print("     T=%7.2f  band=%-9s 纯度=%-8s 偏离代价=%s" % [float(q["knob_value"]), String(q["band"]), pv, pn])
 
 
 ## ★ A4 的**运行时唯一把关的地方**（Core Rule ②）：一份数据自称按哪一版写的，

@@ -77,11 +77,14 @@ gdUnit4 每次都写 `reports/report_<N>/results.xml`。**读它**：
 ```python
 import xml.etree.ElementTree as ET
 r = ET.parse("reports/report_N/results.xml").getroot()
-print(r.get("tests"), r.get("failures"))            # 权威计数
-for tc in r.iter("testcase"):
-    f = tc.find("failure")
-    if f is not None: print(tc.get("name"), f.get("message"))
+
+# ⚠️ 不要在 root 上读 failures —— 它【不统计 errors】（见下面第三条陷阱）。
+tf = sum(int(ts.get("failures") or 0) for ts in r.iter("testsuite"))
+te = sum(int(ts.get("errors")   or 0) for ts in r.iter("testsuite"))
+el = len(list(r.iter("testcase")))
+print(f"failures={tf} errors={te} #testcase={el}")   # ← 这才是判据
 ```
+（**判据 = `failures==0 且 errors==0 且 #testcase == root 的 tests`**，三个都要。）
 
 **为什么**：我曾连续 8 次用正则去解析那次运行的**终端输出**（带 ANSI 色码、换行时机不确定），
 **8 次全部误判** —— 其中一次让我以为"有 3 个测试没被发现"，还花了一整轮去查一个不存在的 bug；
@@ -116,6 +119,31 @@ XML: <testsuite name="probe_suite_test" tests="3" failures="1">
 **一个失败会把它同套件后面的失败【藏起来】**。
 **修掉一条就重跑一次** —— 别以为"只剩一条失败"。
 （本项目在 A4 落地时就被这条咬了一次：控制实验里 6 条测试没跑，而我差点读成"只有 1 条测试有问题"。）
+
+---
+
+### ⚠️ 第三条陷阱（**2026-10-04 实测**）：root 的 `failures` **不统计 `errors`** —— 它会让一次"有错"的运行**看起来是绿的**
+
+**实测**：我在新测试里用了 `assert_float(...).is_not_equal_approx(...)` ——
+而 **gdUnit4 6.2.0 里没有这个方法**。它抛的是 **Runtime Error**，于是报表里：
+
+```
+<testsuites tests="119" failures="0" ...>          ← root 写着 failures=0（看起来全过）
+  <testsuite name="cost_surface_test" tests="14" failures="0" errors="1">   ← 而这里 errors=1
+     <error message="Invalid call. Nonexistent function 'is_not_equal_approx' ...">
+```
+
+x`commands.test` 的**进程退出码是 100**，而 XML 的 `failures` 是 **0** ——
+**我据此读了两次"绿"，都是错的。**
+
+**⇒ 判据（三个都要）**：
+1. `sum(failures over testsuites) == 0`
+2. **`sum(errors over testsuites) == 0`** ← 少这一个就会漏掉"API 用错 / 测试抛异常"
+3. `#testcase == root 的 tests`（第二条陷阱管的那件事）
+
+**⇒ 一条推论**：**一个"抛异常"的测试与一个"断言失败"的测试，在本项目的报表里走的是两条通道** ——
+只看其中一条通道，就会得到一半的真相。这与第二条陷阱（`tests=` 是发现数）是同一类错误的两个面：
+**"报表里的某个字段等于 0" 从来不等于 "什么都没出错"。**
 
 ---
 
