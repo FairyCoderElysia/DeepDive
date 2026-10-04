@@ -87,13 +87,18 @@ func _print_cost_slices() -> void:
 			var b := String(pt["band"])
 			legend[b] = true
 			line += b.substr(0, 1).to_upper()
-			pmin = minf(pmin, float(pt["purity"]))
-			pmax = maxf(pmax, float(pt["purity"]))
+			# ⚠️ 越界端三项是 `null`（**"不适用"不是 0**，口径 2）——
+			#    所以这里必须先判空：`float(null)` 会直接抛错（我第一次就踩了，
+			#    而**测试没覆盖到它** —— 那条路径只有真的跑场景才会走到）。
+			if pt["purity"] != null:
+				pmin = minf(pmin, float(pt["purity"]))
+				pmax = maxf(pmax, float(pt["purity"]))
 		var spec2: Dictionary = CostSurface.KNOBS[k]
 		var rng := "%s..%s" % [spec2.get("min", "?"), spec2.get("max", "?")]
 		if String(spec2.get("kind", "")) == "enum":
 			rng = "枚举 %d 项" % (spec2["options"] as Array).size()
-		print("  %-22s [%s] %s  纯度 %.3f→%.3f" % [k, rng, line, pmin, pmax])
+		var pr := "纯度 %.3f→%.3f" % [pmin, pmax] if pmax >= 0.0 else "纯度 不适用（该段越界）"
+		print("  %-22s [%s] %s  %s" % [k, rng, line, pr])
 	var ks: Array = legend.keys()
 	ks.sort()
 	print("  图例（每格 = 一个采样点，取 band 的首字母）: %s" % " · ".join(ks))

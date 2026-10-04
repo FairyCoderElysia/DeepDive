@@ -72,9 +72,30 @@ func test_cost_is_a_triangle_not_a_scalar() -> void:
 ##   `耗时` 此刻口径未定 ⇒ 必须是 `null`；而 `能耗` 在浅层**确实是 0**（光免费）。
 func test_unknown_cost_item_is_null_not_zero() -> void:
 	var t := _table()
-	var c := CS.cost_at(_step(), _conds(75.0), t)
+	var c := CS.cost_at(_step(), _conds(75.0), t, 0.0)   # 速率非正 -> 耗时"不适用"
 	assert_bool(c["time"] == null).is_true()
 	assert_float(float(c["energy"])).is_equal_approx(0.0, 0.000001)
+
+
+## ★ 口径 1（2026-10-03 用户拍板）：**耗时 = 单位产能时间 = 1 / 推进速率**。
+func test_time_cost_is_one_over_the_injected_rate() -> void:
+	var t := _table()
+	var fast := CS.cost_at(_step(), _conds(75.0), t, 4.0)
+	var slow := CS.cost_at(_step(), _conds(75.0), t, 0.5)
+	assert_float(float(fast["time"])).is_equal_approx(0.25, 0.000001)
+	assert_float(float(slow["time"])).is_equal_approx(2.0, 0.000001)
+	assert_float(float(slow["time"])).is_greater(float(fast["time"]))     # 慢 = 更贵
+
+
+## ★ 口径 2（2026-10-03 用户拍板）：**越界端除灾难标记外，三项都是"不适用"（null）** ——
+##   越界出的是**灾难，不是产品** ⇒ 这里说"纯度 0"是**假话**（玩家会读成"零代价 / 产品为零"）。
+##   与 `耗时 = null` 共用同一条纪律：**"未知 / 不适用"必须与"零"区分开**。
+func test_disaster_band_reports_not_applicable_rather_than_zero() -> void:
+	var t := _table()
+	var c := CS.cost_at(_step(), _conds(200.0), t)
+	assert_str(String(c["disaster"])).is_not_equal("")
+	for f: String in CS.COST_FIELDS:
+		assert_bool(c[f] == null).is_true()          # 不是 0，是"不适用"
 
 
 # ============================================================ 验收 5：降维可用性（F-A6-1）
