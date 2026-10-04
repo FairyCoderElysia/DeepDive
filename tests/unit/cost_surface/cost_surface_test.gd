@@ -6,6 +6,8 @@ extends GdUnitTestSuite
 
 const CS := preload("res://scripts/cost_surface.gd")
 const CD := preload("res://scripts/compound_data.gd")
+const PG := preload("res://scripts/process_graph.gd")
+const RS := preload("res://scripts/reaction_solver.gd")
 
 const KNOBS := SchemaContract.KNOBS
 
@@ -225,3 +227,73 @@ func test_penalty_is_not_applicable_in_the_disaster_band() -> void:
 	var t := _table()
 	var c := CS.cost_at(_step(), _conds(200.0), t)
 	assert_bool(c["penalty"] == null).is_true()
+
+
+# ============================================================ 验收 7：不改模拟（⑤）
+
+## ★ 「**关闭 / 不查看 A6 时，模拟结果必须完全不变** —— 证明它确实不参与判定」。
+##
+## 做法：**跑两遍同一个最小模拟**，一遍在每个 tick 之间把 A6 的每一件都调一遍
+## （`cost_at` + `all_slices`），另一遍**一次都不碰 A6**；然后逐字比较两份快照。
+## 只要 A6 有一丝副作用（改了输入 dict、改了表、碰了池），两份快照就会分叉。
+##
+## ⚠️ **而且必须证明这个模拟【真的动过】** —— 否则"两份都是空的"也会通过，
+##    那就是本项目反复栽过的**空转测试**。（所以下面断言了水被消耗、H₂ 真的产出。）
+func _simulate(ticks: int, touch_a6: bool) -> Dictionary:
+	var t := _table()
+	var s := _step()
+	var water := CD.composition_key({&"H": 2, &"O": 1})
+	var avail := {water: 20}
+	var g = PG.new()
+	g.add_node({"id": &"m", "priority": 0, "step": s,
+				"conditions": {&"param_temperature": 75.0}})
+	var solver = RS.new()
+	for i in ticks:
+		if touch_a6:
+			# ★ 故意"查看"它：代价面被反复查询，而模拟不该因此改变一个原子
+			CS.cost_at(s, {&"param_temperature": 75.0}, t)
+			CS.all_slices(s, {&"param_temperature": 75.0}, t, 7)
+		g.evaluate(avail, t, solver)          # evaluate 自己会把结果落进 avail
+	return avail
+
+
+## 把"账"折成一个**键有序**的字符串，便于逐字比较（Dictionary 的比较不该依赖插入顺序）。
+func _snapshot(avail: Dictionary) -> String:
+	var ks: Array = avail.keys()
+	ks.sort()
+	var parts := PackedStringArray()
+	for k in ks:
+		parts.append("%s=%d" % [k, int(avail[k])])
+	return "|".join(parts)
+
+
+func test_a6_never_changes_the_simulation() -> void:
+	var a := _simulate(20, false)
+	var b := _simulate(20, true)
+
+	# ① 先证明这份模拟**不是空转**（否则"两份都空"也会通过 —— 那是本项目栽过的空转测试）。
+	#    ⚠️ 第一版我用子串 `=20` 表示"水没被消耗"，**那个检查是脆的**：
+	#    H₂ 恰好产了 20 个 ⇒ 快照里就有 `H2=20` ⇒ 它误报。
+	#    **判据必须读键自己的值，不能靠子串碰撞。**
+	var water := CD.composition_key({&"H": 2, &"O": 1})
+	var h2 := CD.composition_key({&"H": 2})
+	assert_int(int(a.get(water, 0))).is_less(20)                  # 水真的被消耗了
+	assert_int(int(a.get(h2, 0))).is_greater(0)                   # H₂ 真的产出了
+
+	# ② 而"看过 A6"与"没看过 A6"必须**逐字相同**
+	assert_str(_snapshot(b)).is_equal(_snapshot(a))
+
+
+## 另一半（更便宜、也更直接）：**A6 不得改动它读的那些东西** ——
+## 它是"只表达"的系统，**输入 dict 在调用前后必须一模一样**。
+func test_a6_does_not_mutate_its_inputs() -> void:
+	var t := _table()
+	var s := _step()
+	var conds := {&"param_temperature": 75.0}
+	var step_before := JSON.stringify(s)
+	var conds_before := JSON.stringify(conds)
+	CS.cost_at(s, conds, t)
+	CS.slice(s, conds, &"param_temperature", t, 9)
+	CS.all_slices(s, conds, t, 9)
+	assert_str(JSON.stringify(s)).is_equal(step_before)
+	assert_str(JSON.stringify(conds)).is_equal(conds_before)
