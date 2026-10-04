@@ -91,9 +91,24 @@ func test_step_and_condition_records_are_declared() -> void:
 
 ## ★ A2 的 ⑦：条件只**引用** A1 的 `param_*`，**不得另立定义**。
 func test_knob_names_are_the_declared_param_star_set() -> void:
-	assert_int(SchemaContract.KNOB_NAMES.size()).is_greater(0)
-	for n: String in SchemaContract.KNOB_NAMES:
+	assert_int(SchemaContract.KNOBS.size()).is_greater(0)
+	for n: String in SchemaContract.KNOBS:
 		assert_bool(n.begins_with("param_")).is_true()
+
+
+## ★ A6 的验收 4「不重定义测试」的另一半：**光有名字不够，范围/单位/默认值都必须在**。
+##   权威在登记册（`design/registry/entities.yaml` 的 `param_*`），
+##   而"契约与登记册逐字段一致"由 `tools/gen_schema_contract.py --check` 逐字段证明。
+##   这里钉住的是"GDScript 侧拿得到完整规格" —— 否则 A6 表达不出范围与单位。
+func test_every_knob_carries_its_full_spec_not_just_a_name() -> void:
+	for n: String in SchemaContract.KNOBS:
+		var spec: Dictionary = SchemaContract.KNOBS[n]
+		assert_bool(spec.has("kind")).is_true()
+		assert_bool(String(spec.get("unit", "")) != "").is_true()
+		var has_range: bool = spec.has("min") and spec.has("max")
+		var has_options: bool = spec.has("options")
+		assert_bool(has_range or has_options).is_true()   # 连续型给范围、枚举型给选项
+		assert_bool(spec.has("default")).is_true()
 
 
 # ============================================================ 已入库的数据确实盖了章

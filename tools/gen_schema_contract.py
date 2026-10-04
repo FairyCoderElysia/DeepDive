@@ -60,6 +60,9 @@ except ImportError:  # pragma: no cover - 环境问题，不是逻辑问题
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SOURCE = REPO_ROOT / "design" / "schema" / "contract.yaml"
 GENERATED = REPO_ROOT / "scripts" / "generated" / "schema_contract.gd"
+# A6 的验收 4（不重定义测试）要的是"旋钮必须与登记册逐字段一致" ——
+# 而登记册开篇自称【跨系统事实的权威来源】⇒ 权威在登记册，契约必须与它一致。
+REGISTRY = REPO_ROOT / "design" / "registry" / "entities.yaml"
 
 # 本机（Windows 中文环境）控制台默认是 cp936，而本脚本的消息里全是中文 ——
 # 不显式改编码的话，消息会变成一串问号，排错时等于没有消息。
@@ -139,9 +142,74 @@ def collect_field_names(contract: dict) -> tuple[dict, dict]:
     return tables, records
 
 
-def collect_knob_names(contract: dict) -> list[str]:
+def collect_knobs(contract: dict) -> dict:
+    """契约里声明的 5 个旋钮 —— **完整规格**（名字 -> 规格）。
+
+    ★ 为什么要有这个（A6 的验收 4「不重定义测试」）：
+      「有哪些旋钮、各自范围与单位」这份 schema 的**权威在 A1**（登记册的 `param_*`），
+      而 A6 只**引用与表达**。本函数把它从真相源里取出来，供 GDScript 侧读 ——
+      然后 `compare_knobs()` 负责证明**它与登记册逐字段一致**（而不是各写一遍）。
+    """
     spec = contract["tables"].get("param_schema") or {}
-    return sorted(k["name"] for k in spec.get("knobs", []))
+    out: dict = {}
+    for k in spec.get("knobs", []):
+        out[k["name"]] = {kk: vv for kk, vv in k.items() if kk != "name"}
+    return dict(sorted(out.items()))
+
+
+def _num_eq(a, b) -> bool:
+    """数字比较：20 与 20.0 必须算相等（YAML 里一个是 int 一个是 float）。"""
+    if isinstance(a, (int, float)) and isinstance(b, (int, float)):
+        return abs(float(a) - float(b)) < 1e-9
+    return a == b
+
+
+def load_registry_knobs() -> dict:
+    """登记册里的 `param_*` —— **它是权威**。"""
+    if not REGISTRY.exists():
+        raise SystemExit(f"找不到登记册：{REGISTRY}")
+    with io.open(REGISTRY, "r", encoding="utf-8") as fh:
+        reg = yaml.safe_load(fh)
+    out: dict = {}
+    for c in reg.get("constants", []):
+        name = str(c.get("name", ""))
+        if not name.startswith("param_"):
+            continue
+        v = c.get("value") or {}
+        spec: dict = {"unit": c.get("unit", "")}
+        if isinstance(v, dict) and "options" in v:
+            spec["kind"] = "enum"
+            spec["options"] = list(v["options"])
+            spec["default"] = v.get("default")
+        else:
+            spec["kind"] = "continuous"
+            spec["min"] = v.get("min")
+            spec["max"] = v.get("max")
+            spec["default"] = v.get("default")
+        out[name] = spec
+    return dict(sorted(out.items()))
+
+
+def compare_knobs(contract: dict, registry: dict) -> list[str]:
+    """逐字段比：契约 vs 登记册。返回不符项（空 = 通过）。"""
+    bad: list[str] = []
+    mine = collect_knobs(contract)
+    for name in sorted(set(mine) | set(registry)):
+        if name not in mine:
+            bad.append(f"{name}: 登记册有，契约里没有")
+            continue
+        if name not in registry:
+            bad.append(f"{name}: 契约里有，登记册里没有（A6 的验收 4 要求逐字段一致）")
+            continue
+        a, b = mine[name], registry[name]
+        for field in ("kind", "unit", "default", "min", "max"):
+            if field in a or field in b:
+                if not _num_eq(a.get(field), b.get(field)):
+                    bad.append(f"{name}.{field}: 契约={a.get(field)!r} 登记册={b.get(field)!r}")
+        if "options" in a or "options" in b:
+            if list(a.get("options") or []) != list(b.get("options") or []):
+                bad.append(f"{name}.options: 契约={a.get('options')!r} 登记册={b.get('options')!r}")
+    return bad
 
 
 def gdscript_literal(obj) -> str:
@@ -153,7 +221,7 @@ def render(contract: dict) -> str:
     fp = fingerprint(contract)
     version = contract["version"]
     tables, records = collect_field_names(contract)
-    knobs = collect_knob_names(contract)
+    knobs = collect_knobs(contract)
 
     return f'''class_name SchemaContract
 extends RefCounted
@@ -195,8 +263,12 @@ const TABLE_FIELDS := {gdscript_literal(tables)}
 ## 记录名 -> 字段名（升序）。
 const RECORD_FIELDS := {gdscript_literal(records)}
 
-## A1 的 `param_*` 名字集合（A2 的 ⑦：只引用、不另立定义）。
-const KNOB_NAMES := {gdscript_literal(knobs)}
+## A1 的 5 个工艺旋钮 —— **完整规格**（名字 -> {{kind, 单位, 范围/选项, 默认值}}）。
+##
+## ★ 权威在【登记册】`design/registry/entities.yaml` 的 `param_*`（A2 的 ⑦：只引用、不另立定义）。
+##   本表与登记册的一致性由 `python tools/gen_schema_contract.py --check` 逐字段验证 ——
+##   所以"两处定义"这件事在结构上被钉住了（A6 的验收 4 要的正是它）。
+const KNOBS := {gdscript_literal(knobs)}
 
 
 # ---------------------------------------------------------------- 轻量检查
@@ -241,6 +313,17 @@ def main() -> int:
     rendered = render(contract)
 
     if args.check:
+        # ★ 先跑【契约 ↔ 登记册】的逐字段交叉校验（A6 的验收 4）。
+        #   放在生成物比对【之前】—— 因为它才是"真正的错处"；
+        #   让它先报，报错就直接指着"哪一条旋钮的哪个字段不一致"。
+        bad = compare_knobs(contract, load_registry_knobs())
+        if bad:
+            print("[schema-check] ❌ 契约里的旋钮与登记册不一致（A6 验收 4）", file=sys.stderr)
+            for line in bad:
+                print(f"  · {line}", file=sys.stderr)
+            print(f"  契约：{SOURCE.relative_to(REPO_ROOT)}", file=sys.stderr)
+            print(f"  权威：{REGISTRY.relative_to(REPO_ROOT)}（登记册自称【跨系统事实的权威来源】）", file=sys.stderr)
+            return 1
         if not GENERATED.exists():
             print(f"[schema-check] 生成物不存在：{GENERATED.relative_to(REPO_ROOT)}", file=sys.stderr)
             print("[schema-check] 跑 `python tools/gen_schema_contract.py` 生成它", file=sys.stderr)

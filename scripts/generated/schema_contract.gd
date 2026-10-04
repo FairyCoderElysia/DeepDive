@@ -68,14 +68,54 @@ const RECORD_FIELDS := {
 	]
 }
 
-## A1 的 `param_*` 名字集合（A2 的 ⑦：只引用、不另立定义）。
-const KNOB_NAMES := [
-	"param_anode_material",
-	"param_catalyst",
-	"param_pressure",
-	"param_residence_time",
-	"param_temperature"
-]
+## A1 的 5 个工艺旋钮 —— **完整规格**（名字 -> {kind, 单位, 范围/选项, 默认值}）。
+##
+## ★ 权威在【登记册】`design/registry/entities.yaml` 的 `param_*`（A2 的 ⑦：只引用、不另立定义）。
+##   本表与登记册的一致性由 `python tools/gen_schema_contract.py --check` 逐字段验证 ——
+##   所以"两处定义"这件事在结构上被钉住了（A6 的验收 4 要的正是它）。
+const KNOBS := {
+	"param_anode_material": {
+		"default": "铱钽涂层钛_析氧型",
+		"kind": "enum",
+		"options": [
+			"石墨阳极",
+			"钌铱涂层钛_析氯型",
+			"铱钽涂层钛_析氧型"
+		],
+		"unit": "枚举 3"
+	},
+	"param_catalyst": {
+		"default": "铂片",
+		"kind": "enum",
+		"options": [
+			"无催化剂",
+			"镍网",
+			"铂片"
+		],
+		"unit": "枚举 3"
+	},
+	"param_pressure": {
+		"default": 6,
+		"kind": "continuous",
+		"max": 40,
+		"min": 1,
+		"unit": "atm"
+	},
+	"param_residence_time": {
+		"default": 4.0,
+		"kind": "continuous",
+		"max": 15,
+		"min": 0.5,
+		"unit": "相对"
+	},
+	"param_temperature": {
+		"default": 80,
+		"kind": "continuous",
+		"max": 200,
+		"min": 20,
+		"unit": "°C"
+	}
+}
 
 
 # ---------------------------------------------------------------- 轻量检查
