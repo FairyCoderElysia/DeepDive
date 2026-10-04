@@ -122,6 +122,19 @@ XML: <testsuite name="probe_suite_test" tests="3" failures="1">
 
 ---
 
+### ⚠️ 补充实测（2026-10-04）：**测试文件里的 Parse Error 会让进程【段错误】（exit **139**）**
+
+上面那条解析不过会被**静默跳过**说的是**老行为/别的错法**。本轮实测两次：测试文件里一个**类型推断**
+错误（，而  来自无类型数组）⇒ gdUnit 先打印
+`Script errors were detected during test discovery!`，然后**进程段错误、exit 139**
+—— **既不静默跳过、也不是文档里写的 105**。
+**⇒ 认这个特征**：`exit 139` + 终端里出现 `Script errors were detected during test discovery!`
+= **先去看 `Parse Error` 那一行**，不要以为是自己把 Godot 跑崩了。
+（同族教训：**报表里没有任何数字也是一种数字** —— 段错误时 `report_N/results.xml` 根本不会更新，
+所以我读到的还是上一次的报告这件事本身就是一个信号。）
+
+---
+
 ### ⚠️ 第三条陷阱（**2026-10-04 实测**）：root 的 `failures` **不统计 `errors`** —— 它会让一次"有错"的运行**看起来是绿的**
 
 **实测**：我在新测试里用了 `assert_float(...).is_not_equal_approx(...)` ——
