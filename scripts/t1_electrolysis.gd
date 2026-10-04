@@ -80,13 +80,26 @@ func _print_cost_slices() -> void:
 	var legend := {}
 	for k in CostSurface.KNOBS:
 		var pts := CostSurface.slice(step, base, StringName(k), TABLE, 21)
+		# ⚠️ 第一版取 band 的**首字母** ⇒ `optimal` 与 `offset` **都是 'O'**，两条带分不开
+		#    （我拿那行读数差点下了错结论）。现在改成：**先收集本切片上出现过的 band 种类，
+		#    给每一【种】分配一个互不相同的字符** —— 这样无论将来多了哪种带，都不可能混。
+		var bands := {}
+		for pt2: Dictionary in pts:
+			bands[String(pt2["band"])] = true
+		var bks: Array = bands.keys()
+		bks.sort()
+		var palette := ["o", "-", "X", "?", "*", "#", "@", "%"]
+		var cmap := {}
+		for i2 in bks.size():
+			cmap[bks[i2]] = palette[i2 % palette.size()]
+
 		var line := ""
 		var pmin := 2.0
 		var pmax := -1.0
 		for pt: Dictionary in pts:
 			var b := String(pt["band"])
-			legend[b] = true
-			line += b.substr(0, 1).to_upper()
+			legend[b] = cmap[b]
+			line += String(cmap[b])
 			# ⚠️ 越界端三项是 `null`（**"不适用"不是 0**，口径 2）——
 			#    所以这里必须先判空：`float(null)` 会直接抛错（我第一次就踩了，
 			#    而**测试没覆盖到它** —— 那条路径只有真的跑场景才会走到）。
@@ -101,7 +114,19 @@ func _print_cost_slices() -> void:
 		print("  %-22s [%s] %s  %s" % [k, rng, line, pr])
 	var ks: Array = legend.keys()
 	ks.sort()
-	print("  图例（每格 = 一个采样点，取 band 的首字母）: %s" % " · ".join(ks))
+	var lg := PackedStringArray()
+	for b2: String in ks:
+		lg.append("%s=%s" % [legend[b2], b2])
+	print("  图例（每格 = 一个采样点）: %s" % "  ".join(lg))
+
+	# ★ 直接把【温度】那条按点摊开 —— 因为上一版的歧义让我**无法回答
+	#   "纯度 0.000 到底出在哪个点"**。这条读数就是为了不再靠猜。
+	print("  ── param_temperature 逐点（前 8 点）──")
+	var tp := CostSurface.slice(step, base, &"param_temperature", TABLE, 21)
+	for i3 in mini(8, tp.size()):
+		var q: Dictionary = tp[i3]
+		var pv := "不适用" if q["purity"] == null else "%.4f" % float(q["purity"])
+		print("     T=%7.2f  band=%-9s 纯度=%s" % [float(q["knob_value"]), String(q["band"]), pv])
 
 
 ## ★ A4 的**运行时唯一把关的地方**（Core Rule ②）：一份数据自称按哪一版写的，
