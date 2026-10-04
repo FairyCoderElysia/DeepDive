@@ -56,6 +56,49 @@ var _tick := 0
 var _temp := 45.0
 
 
+## ★ A6 的第一条消费者：把 `CostSurface` 的单旋钮切片真的算出来并打印。
+##
+## 为什么先做这个：代价面的三个 `[待定]` 里剩下那两个（偏移带曲率 / 权衡换算率）
+## 本来就是"**得先看见形状才定得下来**"的东西 —— 所以先让它可看，再回头定。
+##
+## ⚠️ 它**不改变模拟**（A6 的 Core Rule ⑤）：这里只读 A2 的表、只调 A2 的求值，
+##    一行都不写回池或图 —— 那是"关闭 A6 时模拟结果完全不变"（验收 7）的前提。
+func _print_cost_slices() -> void:
+	var K := CompoundData.composition_key
+	var step: Dictionary = (TABLE.steps_for({K.call(WATER): 2}) as Array)[0]
+	print("
+===== A6 单旋钮切片 · 步骤=%s · 其余 4 个固定在默认值 =====" % step.get("id", "?"))
+	# 基准点：每个旋钮取它的【默认值】（来自生成物 = 登记册，不是我手写的）
+	var base := {}
+	for k in CostSurface.KNOBS:
+		var spec: Dictionary = CostSurface.KNOBS[k]
+		if String(spec.get("kind", "")) == "enum":
+			base[StringName(k)] = (spec["options"] as Array)[0]
+		else:
+			base[StringName(k)] = spec["default"]
+	base[&"param_temperature"] = _temp
+	var legend := {}
+	for k in CostSurface.KNOBS:
+		var pts := CostSurface.slice(step, base, StringName(k), TABLE, 21)
+		var line := ""
+		var pmin := 2.0
+		var pmax := -1.0
+		for pt: Dictionary in pts:
+			var b := String(pt["band"])
+			legend[b] = true
+			line += b.substr(0, 1).to_upper()
+			pmin = minf(pmin, float(pt["purity"]))
+			pmax = maxf(pmax, float(pt["purity"]))
+		var spec2: Dictionary = CostSurface.KNOBS[k]
+		var rng := "%s..%s" % [spec2.get("min", "?"), spec2.get("max", "?")]
+		if String(spec2.get("kind", "")) == "enum":
+			rng = "枚举 %d 项" % (spec2["options"] as Array).size()
+		print("  %-22s [%s] %s  纯度 %.3f→%.3f" % [k, rng, line, pmin, pmax])
+	var ks: Array = legend.keys()
+	ks.sort()
+	print("  图例（每格 = 一个采样点，取 band 的首字母）: %s" % " · ".join(ks))
+
+
 ## ★ A4 的**运行时唯一把关的地方**（Core Rule ②）：一份数据自称按哪一版写的，
 ## 与本内核认的那一版是否**同时**在「版本号」与「内容指纹」上一致。
 ##
@@ -144,6 +187,7 @@ func _step() -> void:
 			_pool.count(&"H"), _pool.count(&"O"), _pool.total(),
 			_compound_line(), "OK" if _pool.conservation_ok() else "FAIL"])
 	if _tick >= RUN_TICKS:
+		_print_cost_slices()
 		print("—— 跑满 %d tick，退出（对账 %s）" % [RUN_TICKS, "通过" if _pool.conservation_ok() else "失败"])
 		get_tree().quit(0 if _pool.conservation_ok() else 1)
 
