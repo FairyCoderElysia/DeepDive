@@ -25,6 +25,7 @@ const TABLE: CompoundData = preload("res://data/reactions.tres")
 const SOLVER := preload("res://scripts/reaction_solver.gd")
 const GRAPH := preload("res://scripts/process_graph.gd")
 const OE := preload("res://scripts/oxygen_economy.gd")
+const DL := preload("res://scripts/depth_layers.gd")
 
 const WATER := {&"H": 2, &"O": 1}
 const SALT := {&"Na": 1, &"Cl": 1}          # NaCl
@@ -62,6 +63,11 @@ var _o2_residual_scaled := 0
 var _o2_alloc: Dictionary = {}
 ## 本 tick 的产氧量（氧/秒）—— 由 A3 的事实折算，B4 只消费它。
 var _o2_produced_this_tick := 0.0
+## 上一次打印时的 O₂ 存量 —— 用来算【区间均值】（单 tick 采样会采到空转 tick）。
+var _o2_last_log_stock := 0
+## 本 tick 的表层提取：请求合计 / 授予合计（C1 的 T1 义务）—— 只用于日志与自检。
+var _surface_requested := 0.0
+var _surface_granted := 0.0
 var _made_this_tick: Dictionary = {}
 var _temp := 45.0
 
@@ -208,24 +214,43 @@ func _o2_stock() -> int:
 ## B4 的一行账：**存量 + 速率 + 状态**（§States 要求两者都要：速率回答"往里还是往外"，
 ## 存量回答"还能撑多久"）。
 func _o2_banner() -> String:
-	var produced := _o2_produced_this_tick
-	var industrial := 0.0                              # 浅层：光免费 ⇒ 工业耗氧 = 0
-	var rate := OE.net_rate(produced, industrial)
+	# ⚠️ 用【区间均值】而不是单 tick 采样：日志每 20 tick 打一次，
+	#   而反应是攒够整数批才做 ⇒ 单 tick 采样会**系统性地采到空转 tick**
+	#   （实测：单 tick 口径一直显示 −0.050/s，而存量明明在涨）。
+	#   §States 要的往里还是往外是**趋势**，所以这里给区间均值。
+	var dt := float(LOG_EVERY_TICKS) / float(TICK_HZ)
+	var rate := float(_o2_stock() - _o2_last_log_stock) / dt
 	var alloc := _o2_alloc
-	return "O₂=%d 收支=%+.3f/s %s ｜ 生命维持分到 %.3f" % [
-		_o2_stock(), rate, OE.state_of(_o2_stock(), rate),
+	return "O₂=%d 收支(近%d tick 均值)=%+.3f/s %s ｜ 生命维持分到 %.3f" % [
+		_o2_stock(), LOG_EVERY_TICKS, rate, OE.state_of(_o2_stock(), rate),
 		float(alloc.get("life_support", 0.0))]
 
 
 func _step() -> void:
 	_tick += 1
+	# ★ **每个 tick 都要清零** —— 否则没跑反应的那一 tick 会拿着上一次的  去算速率，
+	#   于是产量看起来恒定（我第一次就踩了：报 +9.950/s，而存量 20 tick 才涨 1）。
+	#   **判据是速率要和存量的变化对得上** —— 对不上就说明其中一个是假的。
+	_made_this_tick = {}
 	_temp += TEMP_PER_TICK
 	if _temp >= TEMP_MAX:
 		_temp = TEMP_MIN
 
 	# ① 进水（多种原料，各走 A1 的余数累加器，全程无浮点）
-	for it: Dictionary in _intakes:
-		var whole := _pool.accumulate(it["id"], it["key"], it["rate"])
+	#   ★ C1 的 **T1 义务**：**总提取量要先过表层通量天花板**（海水无限，但**提取有上限**）。
+	#     关键在于它压的是【总量】而不是每台泵各自封顶 —— 否则多接几台泵就能线性放大产能，
+	#     天花板等于不存在，而"必须下潜"就退化成一句设定（Risk #8）。
+	var req_units: Array = []
+	for it0: Dictionary in _intakes:
+		req_units.append(float(it0["rate"]) / float(ElementPool.SCALE))
+	var granted := DL.clamp_surface_intake(req_units,
+			DL.SURFACE_THROUGHPUT_CAP / float(TICK_HZ))     # 天花板是"份/秒" ⇒ 每 tick 要除
+	_surface_requested = DL.total_of(req_units)
+	_surface_granted = DL.total_of(granted)
+	for i0 in _intakes.size():
+		var it: Dictionary = _intakes[i0]
+		var rate_scaled := int(round(float(granted[i0]) * float(ElementPool.SCALE)))
+		var whole := _pool.accumulate(it["id"], it["key"], rate_scaled)
 		if whole > 0 and _pool.add_formula(it["formula"], whole):
 			_add_compound(it["formula"], whole)
 
@@ -262,6 +287,11 @@ func _step() -> void:
 			_pool.count(&"H"), _pool.count(&"O"), _pool.total(),
 			_compound_line(), "OK" if _pool.conservation_ok() else "FAIL"])
 		print("        【B4】%s" % _o2_banner())
+		_o2_last_log_stock = _o2_stock()
+		print("        【C1】表层提取 请求 %.3f/s → 授予 %.3f/s（上限 %.2f/s，%s）" % [
+			_surface_requested * float(TICK_HZ), _surface_granted * float(TICK_HZ),
+			DL.SURFACE_THROUGHPUT_CAP,
+			"咬住" if _surface_requested > _surface_granted + 0.000001 else "未到顶"])
 	if _tick >= RUN_TICKS:
 		_print_cost_slices()
 		print("—— 跑满 %d tick，退出（对账 %s）" % [RUN_TICKS, "通过" if _pool.conservation_ok() else "失败"])
@@ -275,8 +305,6 @@ func _run_reaction(batches: int) -> void:
 	#   将来加机器只需在 _ready 里 add_node + add_edge，本函数不用改。
 	for nid2: StringName in _graph.node_ids():
 		_graph.node(nid2)["conditions"] = {&"param_temperature": _temp}
-	# ★ B4 要读"本 tick 产了多少氧" —— 它是 A3 的事实，B4 只消费（不重算）
-	_made_this_tick = {}
 	var g_r: Dictionary = _graph.evaluate(_compounds, TABLE, _solver)
 	for nid0: StringName in (g_r["results"] as Dictionary):
 		for res0: Dictionary in g_r["results"][nid0]:
