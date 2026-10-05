@@ -72,6 +72,10 @@ var _o2_alloc: Dictionary = {}
 var _o2_produced_this_tick := 0.0
 ## 上一次打印时的 O₂ 存量 —— 用来算【区间均值】（单 tick 采样会采到空转 tick）。
 var _o2_last_log_stock := 0
+## ★ **直读的累计产氧量** —— 为什么必须有它：我先前用"消耗 ≈ 产氧"反推产氧速率，
+##   而那是**无效的推断**：存量触底时（`integrate` 把存量夹在 0）**未被满足的呼吸量会被丢掉**，
+##   于是"消耗"小于"名义呼吸"⇒ 反推出来的产氧偏低。**判据要直读，不要反推。**
+var _o2_made_total := 0
 ## 本 tick 的表层提取：请求合计 / 授予合计（C1 的 T1 义务）—— 只用于日志与自检。
 var _surface_requested := 0.0
 var _surface_granted := 0.0
@@ -284,6 +288,7 @@ func _step() -> void:
 
 	# ②.5 记下本 tick 的**产氧量**（供 B4 算收支用；它是 A3 的事实，B4 只消费）
 	_o2_produced_this_tick = float(_made_this_tick.get(OE.O2_KEY, 0)) / (1.0 / float(TICK_HZ))
+	_o2_made_total += int(_made_this_tick.get(OE.O2_KEY, 0))          # 直读累计
 
 	# ③ 对账：每一 tick 都要过，全程整数比较、无容差（A1 的 ⑤）
 	if not _pool.conservation_ok():
@@ -297,6 +302,11 @@ func _step() -> void:
 			_compound_line(), "OK" if _pool.conservation_ok() else "FAIL"])
 		print("        【B4】%s" % _o2_banner())
 		_o2_last_log_stock = _o2_stock()
+		print("        【C1】表层提取 请求 %.3f/s → 授予 %.3f/s（上限 %.2f/s，%s）｜ 累计产氧 %d 个" % [
+			_surface_requested * float(TICK_HZ), _surface_granted * float(TICK_HZ),
+			DL.SURFACE_THROUGHPUT_CAP,
+			"咬住" if _surface_requested > _surface_granted + 0.000001 else "未到顶",
+			_o2_made_total])
 		print("        【C1】表层提取 请求 %.3f/s → 授予 %.3f/s（上限 %.2f/s，%s）" % [
 			_surface_requested * float(TICK_HZ), _surface_granted * float(TICK_HZ),
 			DL.SURFACE_THROUGHPUT_CAP,
