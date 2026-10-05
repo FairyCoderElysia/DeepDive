@@ -2,6 +2,7 @@ extends GdUnitTestSuite
 ## A5 工艺图 —— 逐条对应 A5 的八条 Core Rules（可测的那些）
 
 const PG := preload("res://scripts/process_graph.gd")
+const TK := preload("res://scripts/tank.gd")
 const RS := preload("res://scripts/reaction_solver.gd")
 const CD := preload("res://scripts/compound_data.gd")
 
@@ -189,8 +190,11 @@ func test_output_at_capacity_blocks_the_node_and_never_discards() -> void:
 	var g = _new_graph()
 	var H := _H2()
 	var n := _node("e", _electrolysis_step("el"))
-	# 声明容量：H₂ 上限 10
-	n["capacity"] = {H: 10}
+	# ★ 甲（2026-10-04）：容量不再是"按化合物看流动账"，而是**这个节点的输出罐**
+	#   —— 这里用一个**已经占满**的小罐（remaining == 0）
+	var tk = TK.new(2)
+	tk.put({H: 2})
+	n["tank"] = tk
 	g.add_node(n)
 
 	var avail := {_H2O(): 10, H: 10}          # H₂ 已经满了
@@ -210,7 +214,7 @@ func test_output_at_capacity_blocks_the_node_and_never_discards() -> void:
 func test_output_below_capacity_advances_normally() -> void:
 	var g = _new_graph()
 	var n := _node("e", _electrolysis_step("el"))
-	n["capacity"] = {_H2(): 100}              # 上限很远
+	n["tank"] = TK.new(100000)                # 罐很大 = 上限很远
 	g.add_node(n)
 	var avail := {_H2O(): 4, _H2(): 0}
 	var r = g.evaluate(avail, _table(), RS.new())
@@ -218,8 +222,9 @@ func test_output_below_capacity_advances_normally() -> void:
 	assert_bool(int(avail.get(_H2(), 0)) > 0).is_true()
 
 
-## 没声明容量 -> 完全不受影响（容量是【可选】接口，A5 不自己造默认值）
-func test_no_capacity_declared_means_no_limit() -> void:
+## 没声明罐 -> 完全不受影响（罐是【可选】接口，A5 不自己造默认值）
+## ⚠️ 原名 `test_no_capacity_declared_means_no_limit` —— 甲落地后 `capacity` 已不存在
+func test_no_tank_declared_means_no_limit() -> void:
 	var g = _new_graph()
 	g.add_node(_node("e", _electrolysis_step("el")))
 	var r = g.evaluate({_H2O(): 4}, _table(), RS.new())

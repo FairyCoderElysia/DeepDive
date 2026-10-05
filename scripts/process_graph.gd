@@ -205,14 +205,38 @@ func _snapshots_equal(a: Dictionary, b: Dictionary) -> bool:
 ## ⚠️ A3 会自己做"够不够"的判定，所以这里只做**粗判**（有没有任何输入键的存量 > 0）。
 ## ⑤ 的判据：这个节点的【产出物】是不是已经满了。
 ## **满了就不该再推进** —— 因为推进只会让产出溢出（而"绝不丢弃"意味着那部分本来就不该产出）。
+## ★ 2026-10-04 用户拍板（甲）：**一个节点能接住多少 = 它的【输出罐】还剩多少** ——
+##   于是"节点缓冲"与"罐"合成【一个】概念，而 B6 的 GDD 公式 ③
+##   （`若 下游可用容量 + Σ(罐的剩余容量) < 本 tick 想推出的量 -> 阻塞`）**自然成立**。
+##   ⚠️ 旧写法是"按化合物看【流动账】的上限"（`n["capacity"]`）—— 那与罐**没有连线**，
+##     A5 根本看不见罐（实测：把罐调紧也走不到"装不下"那条路径）。
+##
+## **没有声明罐的节点 = 无上限**（罐是【可选】接口，A5 不自己造默认值）。
 func _output_is_full(n: Dictionary, available: Dictionary, table: CompoundData) -> bool:
-	var cap: Dictionary = n.get("capacity", {})
-	if cap.is_empty():
+	var tank = n.get("tank", null)
+	if tank == null:
 		return false
-	for k: String in cap:
-		if int(available.get(k, 0)) >= int(cap[k]):
+	# ★ "满"的判据**不是"剩余 == 0"**，而是「**连一个最小的产出单位都放不下**」——
+	#   否则会出现在"还剩 2 个原子、而产物要 3 个"时**反复推进、每次都装不下**的活锁。
+	var room := int(tank.remaining())
+	for k: String in _node_output_keys(n):
+		if room < int(CompoundData.total_atoms_of({k: 1})):
 			return true
 	return false
+
+
+## 该节点**可能产出**的化合物键（多分支时取**并集** —— 保守：任一分支放不下就算满）。
+func _node_output_keys(n: Dictionary) -> Array:
+	var keys := {}
+	if n.has("step"):
+		for k: String in ((n["step"] as Dictionary).get("outputs", {}) as Dictionary):
+			keys[k] = true
+	for b in (n.get("branches", []) as Array):
+		for k: String in ((b as Dictionary).get("outputs", {}) as Dictionary):
+			keys[k] = true
+	var out: Array = keys.keys()
+	out.sort()                                  # 确定性（A2/A3/A5 都要求）
+	return out
 
 
 func _has_any_input(n: Dictionary, available: Dictionary, table: CompoundData) -> bool:
