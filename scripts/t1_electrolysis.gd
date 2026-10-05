@@ -35,10 +35,17 @@ const CALCIUM_CHLORIDE := {&"Ca": 1, &"Cl": 2}   # CaCl₂
 const WATER_PER_TICK_SCALED := 37 * ElementPool.SCALE / 100
 ## 反应 0.12 批 / tick
 const BATCH_PER_TICK_SCALED := 12 * ElementPool.SCALE / 100
-## 温度扫过 [30, 145)，好让两条分支都被看到
+## ★ 2026-10-04 改：**前 HOLD_TICKS tick 守在最优带**（= 正常工况），**之后才扫温**（演示分支）。
+##   为什么改：原版**全程扫温** ⇒ 大部分时间在带外、产氧为 0 ⇒
+##   那会把"氧够不够"的测量**污染成演示场景的产物** —— 而"正常工况"与"扫温演示"两个参照系
+##   会给出完全相反的答案（实测：全程扫温时生命维持 0.7 会把殖民地饿死）。
+##   ⇒ 现在两者分开：先看正常工况能不能自持，最后再看分支切换。
 const TEMP_PER_TICK := 1.2
 const TEMP_MIN := 30.0
 const TEMP_MAX := 145.0
+## 前多少 tick 守在最优带；此后才扫温（见上）
+const HOLD_TICKS := 70
+const HOLD_TEMP := 75.0
 
 ## NaCl 0.10 /tick · CaCl₂ 0.05 /tick（都给得比反应需要少 —— 让"抢料"真的发生）
 const SALT_PER_TICK_SCALED := 10 * ElementPool.SCALE / 100
@@ -232,9 +239,11 @@ func _step() -> void:
 	#   于是产量看起来恒定（我第一次就踩了：报 +9.950/s，而存量 20 tick 才涨 1）。
 	#   **判据是速率要和存量的变化对得上** —— 对不上就说明其中一个是假的。
 	_made_this_tick = {}
-	_temp += TEMP_PER_TICK
-	if _temp >= TEMP_MAX:
-		_temp = TEMP_MIN
+	# ★ 正常工况在前：守住最优带（75 落在 high_T 的 [60,110) 里）；之后才扫温演示分支
+	if _tick <= HOLD_TICKS:
+		_temp = HOLD_TEMP
+	else:
+		_temp = TEMP_MIN + float(_tick - HOLD_TICKS - 1) * TEMP_PER_TICK
 
 	# ① 进水（多种原料，各走 A1 的余数累加器，全程无浮点）
 	#   ★ C1 的 **T1 义务**：**总提取量要先过表层通量天花板**（海水无限，但**提取有上限**）。
