@@ -26,6 +26,7 @@ const SOLVER := preload("res://scripts/reaction_solver.gd")
 const GRAPH := preload("res://scripts/process_graph.gd")
 const OE := preload("res://scripts/oxygen_economy.gd")
 const DL := preload("res://scripts/depth_layers.gd")
+const TK := preload("res://scripts/tank.gd")
 
 const WATER := {&"H": 2, &"O": 1}
 const SALT := {&"Na": 1, &"Cl": 1}          # NaCl
@@ -76,6 +77,12 @@ var _o2_last_log_stock := 0
 ##   而那是**无效的推断**：存量触底时（`integrate` 把存量夹在 0）**未被满足的呼吸量会被丢掉**，
 ##   于是"消耗"小于"名义呼吸"⇒ 反推出来的产氧偏低。**判据要直读，不要反推。**
 var _o2_made_total := 0
+## ★ B6：氧的仓库。**罐内是化合物表，不是元素池**（Core Rule ①）——
+##   而它对 A1 的守恒是"池内部"的（F-B6-1）：存取只在化合物账之间移动，元素池一个原子都不动。
+var _o2_tank = TK.new(TK.SIZE_MEDIUM)
+## 本 tick 从罐里喝掉的氧 / 装不下而交回的氧（诊断用）
+var _o2_drank_from_tank := 0
+var _o2_tank_overflow := 0
 ## 本 tick 的表层提取：请求合计 / 授予合计（C1 的 T1 义务）—— 只用于日志与自检。
 var _surface_requested := 0.0
 var _surface_granted := 0.0
@@ -217,9 +224,13 @@ func _ready() -> void:
 		push_error("取料不足：%s 请求 %d 只有 %d —— 调用方的错" % [e, req, avail]))
 
 
-## ★ **那个唯一的氧余额** —— 它住在化合物账里（B4 的 Core Rule ②：氧只有一个池）。
+## ★ **那个唯一的氧余额** —— 住在化合物账里（B4 的 Core Rule ②：氧只有一个池）。
+##
+## ★ 2026-10-04 用户拍板：**罐里的 O₂ 算"可用氧"**（罐子是"备用的肺"）——
+##   否则玩家没有任何理由建氧罐，而"囤氧过冬"这个很自然的策略就不存在。
+##   ⇒ 所以"可用氧" = **流动账 + 罐**，两者是**同一个池的两个部分**（F-B6-1：罐 = 池的有界子集）。
 func _o2_stock() -> int:
-	return int(_compounds.get(OE.O2_KEY, 0))
+	return int(_compounds.get(OE.O2_KEY, 0)) + int(_o2_tank.contents().get(OE.O2_KEY, 0))
 
 
 ## B4 的一行账：**存量 + 速率 + 状态**（§States 要求两者都要：速率回答"往里还是往外"，
@@ -270,13 +281,24 @@ func _step() -> void:
 	# ①.5 ★ B4：**生命维持真的在呼吸** —— 每 tick 从那个唯一的氧余额里扣。
 	#   ⚠️ 余额就是 `_compounds[OE.O2_KEY]`（A5 的化合物账）—— **没有第二个数字**。
 	#   扣不动时**不发明死亡机制**：按 B4 的三级优先如实算出"谁拿到了氧"，然后打印出来。
+	var stored := int(_o2_tank.contents().get(OE.O2_KEY, 0))
 	var o2_stock := _o2_stock()
-	var life := OE.net_rate(0.0, 0.0)                 # 只有生命维持那一项（浅层无工业耗氧）
+	# ★ 两项连续支出都在这里：**生命维持**（B4 的常量）与**存贮耗氧**（推论 2，是速率）
+	var life := OE.net_rate(0.0, 0.0, float(stored))
 	var life_int := OE.integrate(o2_stock, life, 1.0 / float(TICK_HZ), _o2_residual_scaled)
 	var o2_after := int(life_int["stock"])
 	_o2_residual_scaled = int(life_int["residual_scaled"])
-	if o2_after != o2_stock:
-		_add_compound_by_key(OE.O2_KEY, o2_after - o2_stock)   # 差额（负 = 被呼吸掉）
+	var drawn := o2_stock - o2_after                        # 本 tick 要扣掉多少（正数 = 被消耗）
+	if drawn > 0:
+		# ★ 先喝流动账，不够再喝罐（罐子是"备用的肺"）
+		var from_flow := mini(drawn, int(_compounds.get(OE.O2_KEY, 0)))
+		if from_flow > 0:
+			_add_compound_by_key(OE.O2_KEY, -from_flow)
+		var still := drawn - from_flow
+		if still > 0:
+			# 罐里取出：纯 O₂ 的罐，取 2×still 个原子就得到 still 个 O₂
+			var got := _o2_tank.take_atoms(still * 2)
+			_o2_drank_from_tank += int(got.get(OE.O2_KEY, 0))
 	# 三级优先：把"这一 tick 谁拿到了氧"如实算出来（存量不够时低优先级被压缩）
 	_o2_alloc = OE.allocate(float(o2_stock) / (1.0 / float(TICK_HZ)),
 			OE.LIFE_SUPPORT_RATE, 0.0, 0.0)
@@ -289,6 +311,15 @@ func _step() -> void:
 	# ②.5 记下本 tick 的**产氧量**（供 B4 算收支用；它是 A3 的事实，B4 只消费）
 	_o2_produced_this_tick = float(_made_this_tick.get(OE.O2_KEY, 0)) / (1.0 / float(TICK_HZ))
 	_o2_made_total += int(_made_this_tick.get(OE.O2_KEY, 0))          # 直读累计
+	# ★ B6：把流动账里的 O₂ 存进罐（罐就是氧的仓库）——
+	#   **`put()` 把装不下的原样交回**，而"装不下怎么办"属 A5 的阻塞语义（本切片只如实记下）
+	var o2_flowing := int(_compounds.get(OE.O2_KEY, 0))
+	if o2_flowing > 0:
+		var left := _o2_tank.put({OE.O2_KEY: o2_flowing})
+		var stored_now := o2_flowing - int(left.get(OE.O2_KEY, 0))
+		if stored_now > 0:
+			_add_compound_by_key(OE.O2_KEY, -stored_now)
+		_o2_tank_overflow = int(left.get(OE.O2_KEY, 0))
 
 	# ③ 对账：每一 tick 都要过，全程整数比较、无容差（A1 的 ⑤）
 	if not _pool.conservation_ok():
@@ -302,6 +333,12 @@ func _step() -> void:
 			_compound_line(), "OK" if _pool.conservation_ok() else "FAIL"])
 		print("        【B4】%s" % _o2_banner())
 		_o2_last_log_stock = _o2_stock()
+		print("        【B6】罐 %d/%d 原子（O₂×%d）｜ 本 tick 从罐喝 %d ｜ 装不下交回 %d%s" % [
+			_o2_tank.occupied(), _o2_tank.capacity,
+			int(_o2_tank.contents().get(OE.O2_KEY, 0)), _o2_drank_from_tank, _o2_tank_overflow,
+			"  ← 罐满了，该由 A5 阻塞上游" if _o2_tank.is_full() else ""])
+		_o2_drank_from_tank = 0
+		_o2_tank_overflow = 0
 		print("        【C1】表层提取 请求 %.3f/s → 授予 %.3f/s（上限 %.2f/s，%s）｜ 累计产氧 %d 个" % [
 			_surface_requested * float(TICK_HZ), _surface_granted * float(TICK_HZ),
 			DL.SURFACE_THROUGHPUT_CAP,
