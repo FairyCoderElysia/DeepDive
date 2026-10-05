@@ -79,7 +79,10 @@ var _o2_last_log_stock := 0
 var _o2_made_total := 0
 ## ★ B6：氧的仓库。**罐内是化合物表，不是元素池**（Core Rule ①）——
 ##   而它对 A1 的守恒是"池内部"的（F-B6-1）：存取只在化合物账之间移动，元素池一个原子都不动。
-var _o2_tank = TK.new(TK.SIZE_MEDIUM)
+## ⚠️ **演示配置：故意取小**（4 原子 = 2 个 O₂），为的是让 **B6 验收 1 那条路径真的走到**：
+##   A5 现在用这个罐判满（甲），所以罐一满 ⇒ **电解槽被阻塞**（而不是把氧堆在流动账里）。
+##   它是【演示配置】，不是设计结论（罐容三档本身还是暂定值）。
+var _o2_tank = TK.new(4)
 ## 本 tick 从罐里喝掉的氧 / 装不下而交回的氧（诊断用）
 var _o2_drank_from_tank := 0
 var _o2_tank_overflow := 0
@@ -206,6 +209,10 @@ func _ready() -> void:
 		"branches": TABLE.steps_for({K.call(CALCIUM_CHLORIDE): 1, K.call({&"Na": 1, &"O": 1, &"H": 1}): 2}),
 		"conditions": {&"param_temperature": _temp}})
 	_graph.add_edge(&"chlor_alkali", &"hardness_removal")      # NaOH 那条流
+	# ★ B6 的验收 1 的【端到端】那一半：**把氧罐交给 A5 当容量**（甲：capacity 就是罐）。
+	#   ⇒ 罐一满，A5 自己就会**阻塞这个节点 + 告警**（绝不丢弃），而不是把氧堆在流动账里。
+	#   ⚠️ 产出【怎么进罐】仍由本文件（组装点）负责 —— A5 只管"接得住吗"。
+	_graph.node(&"electrolyzer")["tank"] = _o2_tank
 	# 原料（每种各走 A1 的余数累加器）
 	_intakes = [
 		{"id": &"intake_water", "key": &"water", "rate": WATER_PER_TICK_SCALED, "formula": WATER},
